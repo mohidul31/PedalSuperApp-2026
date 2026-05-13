@@ -28,7 +28,17 @@ export default function MainStack() {
   return (
     <Drawer.Navigator
       initialRouteName="HomeStack"
-      screenOptions={{headerShown: false}}
+      screenOptions={{
+        headerShown: false,
+        drawerStyle: {
+          width: '82%',
+          borderTopRightRadius: 34,
+          borderBottomRightRadius: 34,
+          overflow: 'hidden',
+          backgroundColor: '#fff',
+        },
+        overlayColor: 'rgba(215, 218, 228, 0.82)',
+      }}
       drawerContent={props => <CustomDrawer {...props} />}>
       <Drawer.Screen name="HomeStack" component={HomeTabs} />
       <Drawer.Screen name="BudgetPlanStack" component={BudgetPlanStack} />

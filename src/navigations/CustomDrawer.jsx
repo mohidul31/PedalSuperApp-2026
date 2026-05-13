@@ -1,201 +1,332 @@
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
-// CustomDrawer.js
-import React, { useContext, useEffect, useState } from 'react';
+import {Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useContext, useEffect, useState} from 'react';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AuthContext } from '../context/AuthContext';
-import { COLORS } from '../styles/colors';
-import { Icon } from '@rneui/themed';
+import {AuthContext} from '../context/AuthContext';
+import {Icon} from '@rneui/themed';
+import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
 import menuItems from '../data/menuItems';
 
+const utilityItems = [
+  {label: 'সেটিংস', icon: 'cog-outline', type: 'material-community', color: '#0D79FF'},
+  {label: 'নিরাপত্তা', icon: 'shield-check-outline', type: 'material-community', color: '#533BFF'},
+  {label: 'সহায়তা কেন্দ্র', icon: 'help-circle-outline', type: 'material-community', color: '#5B55FF'},
+  {label: 'শর্তাবলী', icon: 'file-document-outline', type: 'material-community', color: '#07A6FF'},
+];
+
+const getInitial = name => (name ? name.trim().charAt(0).toUpperCase() : '?');
+
 const CustomDrawer = props => {
-  const { setIsAuthenticated } = useContext(AuthContext);
-  const [username, setUsername] = useState(null); // Default value
-    const [email, setEmail] = useState(null); // Default value
-    const [phone, setPhone] = useState(null); // Default value
+  const {setIsAuthenticated} = useContext(AuthContext);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-    // Fetch username and email from AsyncStorage when component mounts
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const storedUsername = await AsyncStorage.getItem('user_name');
-        const storedEmail = await AsyncStorage.getItem('user_email');
-        const storedPhone = await AsyncStorage.getItem('user_phone');
-        
-        if (storedUsername) setUsername(storedUsername);
-        if (storedEmail) setEmail(storedEmail);
-        if (storedPhone) setPhone(storedPhone);
-      } catch (error) {
-        Toast.show({
-          type: 'error',
-          position: 'bottom',
-          text1: 'Failed to load user data',
-          visibilityTime: 2000,
-        });
-      }
-    };
-
-    fetchUserData();
+    AsyncStorage.multiGet(['user_name', 'user_email', 'user_phone'])
+      .then(([u, e, p]) => {
+        if (u[1]) setUsername(u[1]);
+        if (e[1]) setEmail(e[1]);
+        if (p[1]) setPhone(p[1]);
+      })
+      .catch(() => {});
   }, []);
 
   const handleLogout = () => {
-    // Show confirmation dialog
     Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to log out?',
+      'লগআউট',
+      'আপনি কি নিশ্চিত লগআউট করতে চান?',
       [
+        {text: 'না', style: 'cancel'},
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes',
+          text: 'হ্যাঁ, লগআউট',
+          style: 'destructive',
           onPress: async () => {
-            try {
-              // Remove tokens from storage
-              await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user_name', 'user_email', 'user_phone']);
-              // Update authentication state
-              setIsAuthenticated(false);
-              Toast.show({
-                type: 'success',
-                position: 'bottom',
-                text1: 'Successfully logged out',
-                visibilityTime: 2000,
-              });
-            } catch (error) {
-              console.error('Logout error:', error);
-              Toast.show({
-                type: 'error',
-                position: 'bottom',
-                text1: 'Failed to logout',
-                visibilityTime: 2000,
-              });
-            }
+            await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user_name', 'user_email', 'user_phone']);
+            setIsAuthenticated(false);
           },
-          style: 'destructive', // Makes the "Yes" button red on iOS
         },
       ],
-      { cancelable: true }
+      {cancelable: true},
     );
   };
 
+  const navigate = screen => {
+    props.navigation.navigate(screen);
+  };
+
+  const showWIP = () =>
+    Toast.show({type: 'error', position: 'bottom', text1: '🚧 শীঘ্রই আসছে', visibilityTime: 1500});
+
   return (
-    <DrawerContentScrollView {...props}>
-      {/* Profile Section */}
-      <View style={styles.profileSection}>
-        <Image
-          source={{
-            uri: 'https://img1.wsimg.com/isteam/ip/85d30a0b-f0a3-4c2b-ad02-86ad127a68c2/blob-25b027d.png',
-          }}
-          style={styles.profileImage}
+    <View style={styles.root}>
+      {/* ── Gradient Header ── */}
+      <LinearGradient
+        colors={['#1A237E', '#2E3192', '#4A52C8']}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.header}>
+
+        {/* Close button */}
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={() => props.navigation.closeDrawer()}
+          activeOpacity={0.7}>
+          <Icon name="close" type="material" size={20} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Avatar */}
+        <View style={styles.avatarRing}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{getInitial(username)}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.headerName}>{username || 'ব্যবহারকারী'}</Text>
+
+        {(phone || email) ? (
+          <Text style={styles.headerContact}>{phone || email}</Text>
+        ) : null}
+
+        <View style={styles.betaPill}>
+          <Text style={styles.betaPillText}>Beta</Text>
+        </View>
+      </LinearGradient>
+
+      {/* ── Scrollable Menu ── */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+
+        {/* Home shortcut */}
+        <MenuItem
+          icon="home-outline"
+          iconType="material-community"
+          label="হোম"
+          color="#2E3192"
+          onPress={() => navigate('HomeStack')}
         />
-        <Text style={styles.profileName}>{username}</Text>
-        <Text style={styles.profileEmail}>{email}</Text>
-        <Text style={styles.profileEmail}>{phone}</Text>
-      </View>
 
-      {/* Drawer Navigation Links */}
-      <View style={styles.drawerItems}>
-        {menuItems.map((item, index) => {
-          const isScreenReady =
-            item.screen === null || item.screen === 'UnderConstruction';
-          const isActive =
-            props.navigation.isFocused() &&
-            props.navigation.getState().routeNames[
-              props.navigation.getState().index
-            ] === item.screen;
+        <SectionLabel text="অ্যাপ মেনু" />
 
+        {menuItems.map((item, i) => {
+          const ready = item.screen && item.screen !== 'UnderConstruction';
           return (
-            <DrawerItem
-              key={index}
+            <MenuItem
+              key={i}
+              icon={item.icon}
+              iconType={item.type}
               label={item.title}
-              onPress={() => {
-                if (isScreenReady) {
-                  Toast.show({
-                    type: 'error',
-                    position: 'bottom',
-                    text1: 'This feature is under development',
-                    visibilityTime: 1000,
-                  });
-                } else {
-                  props.navigation.navigate(item.screen);
-                }
-              }}
-              labelStyle={[
-                styles.drawerItemLabel,
-                isScreenReady ? { color: 'gray' } : { color: 'black' },
-                isActive && { color: COLORS.PRIMARY, fontWeight: 'bold' },
-              ]}
-              icon={({ size, color }) => (
-                <Icon
-                  name={item.icon}
-                  type={item.type}
-                  size={size}
-                  color={
-                    isScreenReady ? color : isActive ? COLORS.PRIMARY : 'black'
-                  }
-                />
-              )}
+              color={item.color}
+              badge={!ready ? 'শীঘ্রই' : null}
+              onPress={ready ? () => navigate(item.screen) : showWIP}
             />
           );
         })}
-      </View>
 
-      {/* Footer Section */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
+        <SectionLabel text="সাধারণ" />
+
+        {utilityItems.map((item, i) => (
+          <MenuItem
+            key={i}
+            icon={item.icon}
+            iconType={item.type}
+            label={item.label}
+            color={item.color}
+            onPress={showWIP}
+          />
+        ))}
+
+        {/* Logout */}
+        <View style={styles.divider} />
+        <TouchableOpacity style={styles.logoutRow} onPress={handleLogout} activeOpacity={0.7}>
+          <View style={styles.logoutIconBox}>
+            <Icon name="logout" type="material" size={20} color="#E53935" />
+          </View>
+          <Text style={styles.logoutLabel}>লগআউট</Text>
         </TouchableOpacity>
-      </View>
-    </DrawerContentScrollView>
+
+      </ScrollView>
+    </View>
   );
 };
 
+/* ── Small sub-components ── */
+
+const SectionLabel = ({text}) => (
+  <Text style={styles.sectionLabel}>{text}</Text>
+);
+
+const MenuItem = ({icon, iconType, label, color, badge, onPress}) => (
+  <TouchableOpacity style={styles.menuRow} onPress={onPress} activeOpacity={0.72}>
+    <View style={[styles.menuIconBox, {backgroundColor: color + '18'}]}>
+      <Icon name={icon} type={iconType} size={20} color={color} />
+    </View>
+    <Text style={styles.menuLabel}>{label}</Text>
+    {badge ? (
+      <View style={[styles.badge, {backgroundColor: color + '18'}]}>
+        <Text style={[styles.badgeText, {color}]}>{badge}</Text>
+      </View>
+    ) : (
+      <Icon name="chevron-right" type="material" size={18} color="#CBD0E0" />
+    )}
+  </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
-  profileSection: {
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+  root: {
+    flex: 1,
+    backgroundColor: '#F8F9FF',
+  },
+
+  /* Header */
+  header: {
+    paddingTop: 52,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 10,
+  avatarRing: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
   },
-  profileName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  avatar: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: '#FFB347',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  profileEmail: {
-    fontSize: 14,
-    color: '#888',
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
   },
-  drawerItems: {
+  headerName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  headerContact: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 12,
+  },
+  betaPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  betaPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
+    letterSpacing: 0.8,
+  },
+
+  /* Scroll */
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
+
+  /* Section label */
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#A0A8C0',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
     marginTop: 20,
+    marginBottom: 6,
+    paddingHorizontal: 6,
   },
-  drawerItemLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    marginTop: 'auto',
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  logoutButton: {
+
+  /* Menu row */
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    gap: 12,
+    marginBottom: 2,
+  },
+  menuIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  logoutText: {
-    fontSize: 16,
-    color: '#f44336',
+  menuLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#17173C',
+  },
+  badge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  /* Logout */
+  divider: {
+    height: 1,
+    backgroundColor: '#E8EDF5',
+    marginVertical: 16,
+    marginHorizontal: 6,
+  },
+  logoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    gap: 12,
+    borderRadius: 14,
+  },
+  logoutIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFEBEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#E53935',
   },
 });
 

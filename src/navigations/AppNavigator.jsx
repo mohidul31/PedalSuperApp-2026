@@ -8,17 +8,20 @@ import AuthStack from './AuthStack';
 import LoadingScreen from '../screens/LoadingScreen';
 import MainStack from './MainStack';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppContent />
-      </NavigationContainer>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <AppContent />
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

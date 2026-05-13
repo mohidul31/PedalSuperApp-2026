@@ -18,7 +18,7 @@ import {useNavigation} from '@react-navigation/native';
 
 export default function HomeScreen({navigation}) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FF" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.openDrawer()}>

@@ -14,9 +14,9 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 const Tab = createBottomTabNavigator();
 
 const TAB_CONFIG = {
-  HomeScreen:    {title: 'হোম',       icon: 'home-outline',     activeIcon: 'home'},
   OfferScreen:   {title: 'অফার',      icon: 'gift-outline',     activeIcon: 'gift'},
-  PedalScreen:   {title: 'Pedal',     icon: 'wallet-outline',   activeIcon: 'wallet',   center: true},
+  PedalScreen:   {title: 'Pedal',     icon: 'wallet-outline',   activeIcon: 'wallet'},
+  HomeScreen:    {title: 'হোম',       icon: 'home-outline',     activeIcon: 'home',     center: true},
   SettingScreen: {title: 'সেবা',      icon: 'settings-outline', activeIcon: 'settings-sharp'},
   AccountScreen: {title: 'অ্যাকাউন্ট', icon: 'person-outline',   activeIcon: 'person'},
 };
@@ -96,9 +96,9 @@ const HomeTabs = () => (
   <Tab.Navigator
     tabBar={props => <CustomTabBar {...props} />}
     screenOptions={{headerShown: false}}>
-    <Tab.Screen name="HomeScreen"    component={HomeScreen} />
     <Tab.Screen name="OfferScreen"   component={OfferScreen} />
     <Tab.Screen name="PedalScreen"   component={PedalScreen} />
+    <Tab.Screen name="HomeScreen"    component={HomeScreen} />
     <Tab.Screen name="SettingScreen" component={SettingScreen} />
     <Tab.Screen name="AccountScreen" component={AccountScreen} />
   </Tab.Navigator>
@@ -110,13 +110,11 @@ export default HomeTabs;
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: '#F8F9FF',
-    paddingHorizontal: 12,
     paddingTop: 4,
   },
   bar: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 28,
     paddingVertical: 8,
     paddingHorizontal: 6,
     alignItems: 'flex-end',

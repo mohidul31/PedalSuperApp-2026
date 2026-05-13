@@ -1,6 +1,5 @@
 import {Icon} from '@rneui/themed';
 import {
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,6 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 import React from 'react';
 import Toast from 'react-native-toast-message';
@@ -19,17 +20,17 @@ export default function HomeScreen({navigation}) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FF" />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.openDrawer()}>
+          <Icon name="menu" type="material" size={26} color="#2E3192" />
+        </TouchableOpacity>
+        <Text style={styles.title}>PEDAL</Text>
+        <Icon name="notifications-none" type="material" size={26} color="#2E3192" />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.openDrawer()}>
-            <Icon name="menu" type="material" size={26} color="#2E3192" />
-          </TouchableOpacity>
-          <Text style={styles.title}>PEDAL</Text>
-          <Icon name="notifications-none" type="material" size={26} color="#2E3192" />
-        </View>
-
         <View style={styles.searchCard}>
           <Icon name="search" type="material" size={20} color="#777" />
           <TextInput
@@ -109,14 +110,15 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 24,
     paddingBottom: 24,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#F8F9FF',
   },
   title: {
     color: '#2E3192',

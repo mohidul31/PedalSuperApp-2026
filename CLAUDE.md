@@ -31,28 +31,32 @@ Authentication state drives the root navigator split:
 AppNavigator (AuthProvider + NavigationContainer)
 ├── AuthStack                        # isAuthenticated = false
 │   ├── LoginScreen                  # Phone + reference code modal
-│   ├── RegistrationScreen
-│   └── ProvideOTPScreen
+│   ├── ProvideOtpScreen
+│   └── RegistrationScreen
 └── MainStack                        # isAuthenticated = true
     └── Drawer Navigator (CustomDrawer)
         ├── HomeTabs (Bottom Tabs)
-        │   ├── HomeScreen           # 3x3 feature card grid
         │   ├── OfferScreen
         │   ├── PedalScreen
+        │   ├── HomeScreen           # 3x3 feature card grid (center tab)
         │   ├── SettingScreen
         │   └── AccountScreen
-        ├── BudgetPlanStack (TabView)
-        │   ├── MyBudgetScreen
-        │   ├── IncomePlanScreen
-        │   └── SummaryScreen
-        └── SmeManagerStack
-            └── SmeManagerLandingScreen → SMEDashboardScreen, StockManagerScreen, SellScreen
+        ├── BudgetPlanStack (Stack)
+        │   └── BudgetPlannerLandingScreen (TabView)
+        │       ├── MyBudgetScreen
+        │       └── IncomePlanScreen
+        └── SmeManagerStack (Stack)
+            └── SmeManagerLandingScreen (TabView)
+                ├── SmeDashboardScreen
+                ├── SellScreen
+                └── StockManagerScreen
 ```
 
-- `src/navigations/AppNavigator.jsx` — root; checks AsyncStorage for `access_token` on load
-- `src/navigations/MainStack.jsx` — drawer + nested stacks
-- `src/navigations/HomeTabs.jsx` — bottom tabs with Bengali labels and Ionicons
-- `src/navigations/CustomDrawer.jsx` — sidebar with user profile
+- `src/navigation/AppNavigator.jsx` — root; checks AsyncStorage for `access_token` on load
+- `src/navigation/AuthStack.jsx` — auth screens stack
+- `src/navigation/MainStack.jsx` — drawer + nested stacks
+- `src/navigation/HomeTabs.jsx` — bottom tabs with Bengali labels and Ionicons
+- `src/navigation/CustomDrawer.jsx` — sidebar with user profile
 - `src/data/menuItems.js` — drives the HomeScreen 3x3 grid; cards set `screen` property or `UnderConstruction`
 
 ### State Management
@@ -99,6 +103,8 @@ Endpoints used:
 Toast.show({ type: 'success', position: 'bottom', text1: 'Message', visibilityTime: 2000 });
 ```
 
-**UI:** Bengali (Bangla) text is hardcoded directly in components — no i18n library. LinearGradient (blue) used on auth/loading screens. `src/styles/colors.js` defines the color palette; each component uses its own `StyleSheet.create()`.
+**UI:** Bengali (Bangla) text is hardcoded directly in components — no i18n library. LinearGradient (blue) used on auth/loading screens. `src/constants/colors.js` defines the color palette. Styles live in `src/styles/` as separate files (e.g. `HomeScreen.styles.js`) — not co-located with components.
+
+**Common components:** `src/components/common/` — `ScreenHeader` (back-nav header), `SegmentedTabBar` (custom tab bar for TabViews), `UnderConstruction`, `LoadingContainer`, `NoDataFound`.
 
 **Unbuilt features:** Most HomeScreen grid items route to `UnderConstruction` — they show a toast warning instead of a real screen.

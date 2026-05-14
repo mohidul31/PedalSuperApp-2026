@@ -1,22 +1,22 @@
 import * as Yup from 'yup';
 
 import {
-  ActivityIndicator,
   Modal,
-  Pressable,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {Row, Rows, Table} from 'react-native-table-component';
 
-import {COLORS} from '../../../styles/colors';
 import DeleteModal from '../../../components/DeleteModal';
 import {FAB} from '@rneui/themed';
 import {Formik} from 'formik';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import LoadingContainer from '../../../components/LoadingContainer';
 import NoDataFound from '../../../components/NoDataFound';
 import {Picker} from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
@@ -27,20 +27,15 @@ export default function StockManagerScreen() {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(null);
+  const [deleteProductId, setDeleteProductId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const tableHead = ['নাম', 'পরিমাণ', 'বিক্রয় মূল্য', 'স্টক', 'অ্যাকশন'];
   const units = ['পিস', 'কেজি', 'লিটার', 'মিটার', 'ডজন'];
 
   const showToast = (message, type = 'success') => {
-    Toast.show({
-      type,
-      text1: message,
-      position: 'bottom',
-    });
+    Toast.show({type, text1: message, position: 'bottom'});
   };
 
   useEffect(() => {
@@ -51,11 +46,9 @@ export default function StockManagerScreen() {
     setIsLoading(true);
     try {
       const response = await api.get('api/product');
-      const fetchedProducts = Array.isArray(response.data.data)
-        ? response.data.data
-        : [];
-      setProducts(fetchedProducts);
-      setFilteredProducts(fetchedProducts);
+      const fetched = Array.isArray(response.data.data) ? response.data.data : [];
+      setProducts(fetched);
+      setFilteredProducts(fetched);
     } catch (error) {
       setProducts([]);
       setFilteredProducts([]);
@@ -65,15 +58,16 @@ export default function StockManagerScreen() {
     }
   };
 
-  const handleSearch = (query) => {
+  const handleSearch = query => {
     setSearchQuery(query);
     if (query.trim() === '') {
       setFilteredProducts(products);
     } else {
-      const filtered = products.filter((product) =>
-        product.name.toLowerCase().includes(query.toLowerCase())
+      setFilteredProducts(
+        products.filter(p =>
+          p.name.toLowerCase().includes(query.toLowerCase()),
+        ),
       );
-      setFilteredProducts(filtered);
     }
   };
 
@@ -82,64 +76,38 @@ export default function StockManagerScreen() {
     setFilteredProducts(products);
   };
 
-  const handleReload = () => {
-    fetchProducts();
-    setSearchQuery('');
-  };
-
   const handleAddStock = () => {
-    setEditingIndex(null);
+    setEditingProduct(null);
     setModalVisible(true);
   };
 
+  const handleEdit = product => {
+    setEditingProduct(product);
+    setModalVisible(true);
+  };
+
+  const handleDelete = product => {
+    setDeleteProductId(product.id);
+    setDeleteModalVisible(true);
+  };
+
   const handleDeleteConfirm = async () => {
-    if (deleteIndex !== null) {
+    if (deleteProductId !== null) {
       try {
-        const productId = products[deleteIndex].id;
-        await api.delete(`/api/product/${productId}`);
-        const updated = [...products];
-        updated.splice(deleteIndex, 1);
+        await api.delete(`/api/product/${deleteProductId}`);
+        const updated = products.filter(p => p.id !== deleteProductId);
         setProducts(updated);
         setFilteredProducts(updated);
         showToast('পণ্যটি মুছে ফেলা হয়েছে');
       } catch (error) {
         showToast('পণ্য মুছতে ব্যর্থ', 'error');
       }
-      setDeleteIndex(null);
+      setDeleteProductId(null);
       setDeleteModalVisible(false);
     }
   };
 
-  const handleDelete = (index) => {
-    setDeleteIndex(index);
-    setDeleteModalVisible(true);
-  };
-
-  const handleEdit = (index) => {
-    if (index >= 0 && index < products.length) {
-      setEditingIndex(index);
-      setModalVisible(true);
-    } else {
-      showToast('সম্পাদনা করতে ব্যর্থ', 'error');
-    }
-  };
-
-  const tableData = filteredProducts.map((item, index) => [
-    item.name || '-',
-    `${item.purchaseQuantity || 0} ${item.unit || ''}`,
-    item.sellingRate || 0,
-    item.stockQty || 0,
-    <View style={{flexDirection: 'row', justifyContent: 'center'}}>
-      <Pressable onPress={() => handleEdit(index)} style={{marginRight: 10}}>
-        <Ionicons name="create-outline" size={20} color={COLORS.PRIMARY} />
-      </Pressable>
-      <Pressable onPress={() => handleDelete(index)}>
-        <Ionicons name="trash-outline" size={20} color="red" />
-      </Pressable>
-    </View>,
-  ]);
-
-  const handleSubmitForm = async (values) => {
+  const handleSubmitForm = async values => {
     try {
       const payload = {
         name: values.name,
@@ -150,45 +118,48 @@ export default function StockManagerScreen() {
         sellingRate: parseFloat(values.sellingRate) || 0,
       };
 
-      if (editingIndex !== null && products[editingIndex]) {
-        const productId = products[editingIndex].id;
-        payload.id = productId;
-        const response = await api.put(`/api/product/${productId}`, payload);
-        const updatedProducts = [...products];
+      if (editingProduct) {
+        payload.id = editingProduct.id;
+        const response = await api.put(`/api/product/${editingProduct.id}`, payload);
         if (response.data.success) {
-          updatedProducts[editingIndex] = response.data.data;
-          setProducts(updatedProducts);
-          setFilteredProducts(updatedProducts);
+          const updated = products.map(p =>
+            p.id === editingProduct.id ? response.data.data : p,
+          );
+          setProducts(updated);
+          setFilteredProducts(updated);
           showToast('পণ্য আপডেট করা হয়েছে');
         } else {
           showToast('Failed to update', 'error');
         }
       } else {
         const response = await api.post('/api/product', payload);
-        const updatedProducts = [...products, response.data.data];
-        setProducts(updatedProducts);
-        setFilteredProducts(updatedProducts);
+        const updated = [...products, response.data.data];
+        setProducts(updated);
+        setFilteredProducts(updated);
         showToast('নতুন পণ্য যোগ করা হয়েছে');
       }
       setModalVisible(false);
-      setEditingIndex(null);
+      setEditingProduct(null);
     } catch (error) {
       showToast('পণ্য সংরক্ষণে ব্যর্থ', 'error');
     }
   };
 
   const getInitialValues = () => {
-    if (editingIndex !== null && products[editingIndex]) {
-      const product = products[editingIndex];
+    if (editingProduct) {
       return {
-        name: product.name || '',
-        brand: product.brand || '',
-        purchaseQuantity: product.purchaseQuantity
-          ? String(product.purchaseQuantity)
+        name: editingProduct.name || '',
+        brand: editingProduct.brand || '',
+        purchaseQuantity: editingProduct.purchaseQuantity
+          ? String(editingProduct.purchaseQuantity)
           : '',
-        unit: product.unit || units[0],
-        purchaseRate: product.purchaseRate ? String(product.purchaseRate) : '',
-        sellingRate: product.sellingRate ? String(product.sellingRate) : '',
+        unit: editingProduct.unit || units[0],
+        purchaseRate: editingProduct.purchaseRate
+          ? String(editingProduct.purchaseRate)
+          : '',
+        sellingRate: editingProduct.sellingRate
+          ? String(editingProduct.sellingRate)
+          : '',
       };
     }
     return {
@@ -202,214 +173,255 @@ export default function StockManagerScreen() {
   };
 
   return (
-    <View style={{flex: 1, padding: 10}}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.totalCount}>মোট পণ্য: {filteredProducts.length}</Text>
-        <Pressable
-          style={styles.reloadButton}
-          onPress={handleReload}
-          disabled={isLoading}>
+    <View style={styles.page}>
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
           <Ionicons
-            name="reload"
-            size={20}
-            color={isLoading ? 'gray' : COLORS.PRIMARY}
+            name="search-outline"
+            size={18}
+            color="#8A92B8"
+            style={styles.searchIcon}
           />
-          <Text
-            style={[
-              styles.reloadText,
-              {color: isLoading ? 'gray' : COLORS.PRIMARY},
-            ]}>
-            রিফ্রেশ
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Search Box with Clear Icon */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="পণ্যের নাম দিয়ে অনুসন্ধান করুন"
-          placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-          value={searchQuery}
-          onChangeText={handleSearch}
-        />
-        {searchQuery.length > 0 && (
-          <Pressable onPress={clearSearch} style={styles.clearIcon}>
-            <Ionicons name="close-circle" size={24} color="gray" />
-          </Pressable>
-        )}
-      </View>
-
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-          <Text style={styles.loadingText}>পণ্য লোড হচ্ছে...</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="পণ্যের নাম দিয়ে অনুসন্ধান করুন"
+            placeholderTextColor="#8A92B8"
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch}>
+              <Ionicons name="close-circle" size={18} color="#8A92B8" />
+            </TouchableOpacity>
+          )}
         </View>
-      ) : filteredProducts.length === 0 ? (
-        <NoDataFound title="পণ্য" />
+      </View>
+
+      <View style={styles.countRow}>
+        <Text style={styles.countText}>মোট পণ্য: {filteredProducts.length}</Text>
+      </View>
+
+      {isLoading && products.length === 0 ? (
+        <LoadingContainer />
       ) : (
-        <Table borderStyle={{borderWidth: 1, borderColor: '#ccc'}}>
-          <Row
-            data={tableHead}
-            style={styles.head}
-            textStyle={styles.headText}
-          />
-          <Rows data={tableData} textStyle={styles.text} />
-        </Table>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={() => {
+                fetchProducts();
+                setSearchQuery('');
+              }}
+              colors={['#1D2A74']}
+            />
+          }>
+          {filteredProducts.length === 0 ? (
+            <NoDataFound title="পণ্য" icon="cube-outline" />
+          ) : (
+            filteredProducts.map(item => (
+              <View key={item.id} style={styles.productCard}>
+                <View style={styles.cardLeft}>
+                  <Text style={styles.productName}>{item.name || '-'}</Text>
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaPill}>
+                      <Text style={styles.metaLabel}>পরিমাণ</Text>
+                      <Text style={styles.metaValue}>
+                        {item.purchaseQuantity || 0} {item.unit || ''}
+                      </Text>
+                    </View>
+                    <View style={styles.metaPill}>
+                      <Text style={styles.metaLabel}>বিক্রয় মূল্য</Text>
+                      <Text style={styles.metaValue}>৳ {item.sellingRate || 0}</Text>
+                    </View>
+                    <View style={[styles.metaPill, styles.stockPill]}>
+                      <Text style={styles.metaLabel}>স্টক</Text>
+                      <Text style={[styles.metaValue, styles.stockValue]}>
+                        {item.stockQty || 0}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => handleEdit(item)}>
+                    <Ionicons name="create-outline" size={18} color="#1D2A74" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDelete(item)}>
+                    <Ionicons name="trash-outline" size={18} color="#E43A3A" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
       )}
 
       <FAB
         visible={true}
         title="পণ্য যোগ করুন"
         icon={{name: 'add', color: 'white'}}
-        color={COLORS.PRIMARY}
+        color="#1D2A74"
         placement="right"
         style={{marginBottom: 50}}
         onPress={handleAddStock}
       />
 
-      {/* Add/Edit Modal */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => {
           setModalVisible(false);
-          setEditingIndex(null);
+          setEditingProduct(null);
         }}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>
-              {editingIndex !== null ? 'পণ্য আপডেট করুন' : 'নতুন পণ্য যোগ করুন'}
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>
+              {editingProduct ? 'পণ্য আপডেট করুন' : 'নতুন পণ্য যোগ করুন'}
             </Text>
-            <Formik
-              initialValues={getInitialValues()}
-              enableReinitialize={true}
-              validationSchema={Yup.object({
-                name: Yup.string().required('পণ্যের নাম আবশ্যক'),
-                purchaseQuantity: Yup.number().required('পরিমাণ আবশ্যক'),
-                unit: Yup.string().required('ইউনিট আবশ্যক'),
-                purchaseRate: Yup.number().required('ক্রয় মূল্য আবশ্যক'),
-                sellingRate: Yup.number().required('বিক্রয় মূল্য আবশ্যক'),
-              })}
-              onSubmit={handleSubmitForm}>
-              {({
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                values,
-                errors,
-                touched,
-                setFieldValue,
-              }) => (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="পণ্যের নাম"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-                    value={values.name}
-                    onChangeText={handleChange('name')}
-                    onBlur={handleBlur('name')}
-                  />
-                  {touched.name && errors.name && (
-                    <Text style={styles.error}>{errors.name}</Text>
-                  )}
-
-                  <View style={styles.quantityContainer}>
+            <ScrollView
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}>
+              <Formik
+                initialValues={getInitialValues()}
+                enableReinitialize={true}
+                validationSchema={Yup.object({
+                  name: Yup.string().required('পণ্যের নাম আবশ্যক'),
+                  purchaseQuantity: Yup.number().required('পরিমাণ আবশ্যক'),
+                  unit: Yup.string().required('ইউনিট আবশ্যক'),
+                  purchaseRate: Yup.number().required('ক্রয় মূল্য আবশ্যক'),
+                  sellingRate: Yup.number().required('বিক্রয় মূল্য আবশ্যক'),
+                })}
+                onSubmit={handleSubmitForm}>
+                {({
+                  handleChange,
+                  handleBlur,
+                  handleSubmit,
+                  values,
+                  errors,
+                  touched,
+                  setFieldValue,
+                }) => (
+                  <View style={styles.formBody}>
+                    <Text style={styles.fieldLabel}>পণ্যের নাম *</Text>
                     <TextInput
-                      style={[styles.input, styles.quantityInput]}
-                      placeholder="পরিমাণ"
-                      placeholderTextColor={COLORS.PLACEHOLDER_TEXT} 
-                      value={values.purchaseQuantity}
-                      onChangeText={handleChange('purchaseQuantity')}
-                      onBlur={handleBlur('purchaseQuantity')}
+                      style={styles.input}
+                      placeholder="পণ্যের নাম লিখুন"
+                      placeholderTextColor="#8A92B8"
+                      value={values.name}
+                      onChangeText={handleChange('name')}
+                      onBlur={handleBlur('name')}
+                    />
+                    {touched.name && errors.name && (
+                      <Text style={styles.errorText}>{errors.name}</Text>
+                    )}
+
+                    <Text style={styles.fieldLabel}>পরিমাণ ও ইউনিট *</Text>
+                    <View style={styles.rowInputs}>
+                      <TextInput
+                        style={[styles.input, styles.halfInput]}
+                        placeholder="পরিমাণ"
+                        placeholderTextColor="#8A92B8"
+                        value={values.purchaseQuantity}
+                        onChangeText={handleChange('purchaseQuantity')}
+                        onBlur={handleBlur('purchaseQuantity')}
+                        keyboardType="numeric"
+                      />
+                      <View style={styles.pickerWrap}>
+                        <Picker
+                          selectedValue={values.unit}
+                          style={styles.picker}
+                          onValueChange={val => setFieldValue('unit', val)}
+                          mode="dropdown">
+                          {units.map(u => (
+                            <Picker.Item
+                              key={u}
+                              label={u}
+                              value={u}
+                              color="#1D2A74"
+                            />
+                          ))}
+                        </Picker>
+                      </View>
+                    </View>
+                    {touched.purchaseQuantity && errors.purchaseQuantity && (
+                      <Text style={styles.errorText}>
+                        {errors.purchaseQuantity}
+                      </Text>
+                    )}
+
+                    <Text style={styles.fieldLabel}>ক্রয় মূল্য *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ক্রয় মূল্য"
+                      placeholderTextColor="#8A92B8"
+                      value={values.purchaseRate}
+                      onChangeText={handleChange('purchaseRate')}
+                      onBlur={handleBlur('purchaseRate')}
                       keyboardType="numeric"
                     />
-                    <View style={styles.pickerContainer}>
-                      <Picker
-                        selectedValue={values.unit}
-                        style={styles.unitPicker}
-                        onValueChange={(itemValue) =>
-                          setFieldValue('unit', itemValue)
-                        }
-                        mode="dropdown">
-                        {units.map((unit) => (
-                          <Picker.Item key={unit} label={unit} value={unit} color="black" />
-                        ))}
-                      </Picker>
+                    {touched.purchaseRate && errors.purchaseRate && (
+                      <Text style={styles.errorText}>{errors.purchaseRate}</Text>
+                    )}
+
+                    <Text style={styles.fieldLabel}>বিক্রয় মূল্য *</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="বিক্রয় মূল্য"
+                      placeholderTextColor="#8A92B8"
+                      value={values.sellingRate}
+                      onChangeText={handleChange('sellingRate')}
+                      onBlur={handleBlur('sellingRate')}
+                      keyboardType="numeric"
+                    />
+                    {touched.sellingRate && errors.sellingRate && (
+                      <Text style={styles.errorText}>{errors.sellingRate}</Text>
+                    )}
+
+                    <Text style={styles.fieldLabel}>ব্র্যান্ড (ঐচ্ছিক)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="ব্র্যান্ড"
+                      placeholderTextColor="#8A92B8"
+                      value={values.brand}
+                      onChangeText={handleChange('brand')}
+                      onBlur={handleBlur('brand')}
+                    />
+
+                    <View style={styles.sheetActions}>
+                      <TouchableOpacity
+                        style={styles.cancelBtn}
+                        onPress={() => {
+                          setModalVisible(false);
+                          setEditingProduct(null);
+                        }}>
+                        <Text style={styles.cancelBtnText}>বাতিল</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.saveBtn}
+                        onPress={handleSubmit}>
+                        <Text style={styles.saveBtnText}>
+                          {editingProduct ? 'আপডেট' : 'সংরক্ষণ করুন'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  {touched.purchaseQuantity && errors.purchaseQuantity && (
-                    <Text style={styles.error}>{errors.purchaseQuantity}</Text>
-                  )}
-                  {touched.unit && errors.unit && (
-                    <Text style={styles.error}>{errors.unit}</Text>
-                  )}
-
-                  <TextInput
-                    style={styles.input}
-                    placeholder="ক্রয় মূল্য"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT} 
-                    value={values.purchaseRate}
-                    onChangeText={handleChange('purchaseRate')}
-                    onBlur={handleBlur('purchaseRate')}
-                    keyboardType="numeric"
-                  />
-                  {touched.purchaseRate && errors.purchaseRate && (
-                    <Text style={styles.error}>{errors.purchaseRate}</Text>
-                  )}
-
-                  <TextInput
-                    style={styles.input}
-                    placeholder="বিক্রয় মূল্য"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT} 
-                    value={values.sellingRate}
-                    onChangeText={handleChange('sellingRate')}
-                    onBlur={handleBlur('sellingRate')}
-                    keyboardType="numeric"
-                  />
-                  {touched.sellingRate && errors.sellingRate && (
-                    <Text style={styles.error}>{errors.sellingRate}</Text>
-                  )}
-
-                  <TextInput
-                    style={styles.input}
-                    placeholder="ব্র্যান্ড (ঐচ্ছিক)"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT} 
-                    value={values.brand}
-                    onChangeText={handleChange('brand')}
-                    onBlur={handleBlur('brand')}
-                  />
-
-                  <View style={styles.buttonContainer}>
-                    <Pressable
-                      style={[styles.button, {backgroundColor: 'gray'}]}
-                      onPress={() => {
-                        setModalVisible(false);
-                        setEditingIndex(null);
-                      }}>
-                      <Text style={{color: 'white'}}>বাতিল</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.button, {backgroundColor: COLORS.PRIMARY}]}
-                      onPress={handleSubmit}>
-                      <Text style={{color: 'white'}}>
-                        {editingIndex !== null ? 'আপডেট' : 'সংরক্ষণ করুন'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </>
-              )}
-            </Formik>
+                )}
+              </Formik>
+            </ScrollView>
           </View>
         </View>
       </Modal>
 
       <DeleteModal
         visible={deleteModalVisible}
-        onClose={() => {
-          setDeleteModalVisible(false);
-        }}
+        onClose={() => setDeleteModalVisible(false)}
         onConfirm={handleDeleteConfirm}
         message="আপনি এই পণ্যটি মুছে ফেলতে চান?"
       />
@@ -418,135 +430,213 @@ export default function StockManagerScreen() {
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  page: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#F6F7FF',
   },
-  modalContainer: {
-    width: '85%',
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
+  searchRow: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    marginTop: 10,
-    borderRadius: 8,
-  },
-  searchContainer: {
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    position: 'relative',
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    paddingRight: 40, // Space for the clear icon
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
+    fontSize: 14,
+    color: '#1D2A74',
   },
-  clearIcon: {
-    position: 'absolute',
-    right: 10,
+  countRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
-  quantityContainer: {
+  countText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6F759B',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  productCard: {
     flexDirection: 'row',
-    marginTop: 10,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#B3B7D5',
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 3,
+  },
+  cardLeft: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 10,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  metaPill: {
+    backgroundColor: '#F0F1FA',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  stockPill: {
+    backgroundColor: '#EDF7F1',
+  },
+  metaLabel: {
+    fontSize: 11,
+    color: '#8A92B8',
+    marginBottom: 1,
+  },
+  metaValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D2A74',
+  },
+  stockValue: {
+    color: '#1B792E',
+  },
+  cardActions: {
+    flexDirection: 'column',
     alignItems: 'center',
   },
-  quantityInput: {
-    flex: 1,
-    marginRight: 10,
-    height: 50,
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#EEF0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
-  pickerContainer: {
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#FCE8E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlay: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    maxHeight: '92%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E3F0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 20,
+  },
+  formBody: {
+    paddingBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6F759B',
+    marginBottom: 6,
+    marginTop: 14,
+  },
+  input: {
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#1D2A74',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  halfInput: {
+    flex: 1,
+    marginRight: 8,
+  },
+  pickerWrap: {
+    flex: 1,
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
     overflow: 'hidden',
-    marginTop: 10,
+    height: 52,
+    justifyContent: 'center',
   },
-  unitPicker: {
-    height: 50,
-    width: '100%',
+  picker: {
+    color: '#1D2A74',
+    height: 52,
   },
-  error: {
-    color: 'red',
+  errorText: {
+    color: '#E43A3A',
     fontSize: 12,
     marginTop: 4,
   },
-  buttonContainer: {
+  sheetActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 24,
   },
-  button: {
+  cancelBtn: {
     flex: 1,
-    paddingVertical: 10,
-    marginHorizontal: 5,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#F5F7FF',
     alignItems: 'center',
+    marginRight: 8,
   },
-  head: {
-    height: 50,
-    backgroundColor: COLORS.PRIMARY,
+  cancelBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6F759B',
   },
-  headText: {
-    margin: 6,
-    textAlign: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  text: {
-    margin: 6,
-    textAlign: 'center',
-    color: 'black',
-  },
-  loadingContainer: {
+  saveBtn: {
     flex: 1,
-    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#1D2A74',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: COLORS.PRIMARY,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  totalCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.PRIMARY,
-  },
-  reloadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 5,
-    backgroundColor: '#f0f0f0',
-  },
-  reloadText: {
-    marginLeft: 5,
-    fontSize: 14,
-    fontWeight: 'bold',
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

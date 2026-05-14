@@ -1,20 +1,21 @@
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
-import {Button, FAB} from '@rneui/themed';
 import React, {useEffect, useState} from 'react';
-import {Row, Rows, Table} from 'react-native-table-component';
 
-import {COLORS} from '../../../styles/colors';
 import DeleteModal from '../../../components/DeleteModal';
+import {FAB} from '@rneui/themed';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import LoadingContainer from '../../../components/LoadingContainer';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import NoDataFound from '../../../components/NoDataFound';
 import {Picker} from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
@@ -26,11 +27,9 @@ export default function SellScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [sellerDeleteModalVisible, setSellerDeleteModalVisible] = useState(false);
-  const [productModalVisible, setProductModalVisible] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState(null);
   const [selectedSaleDetails, setSelectedSaleDetails] = useState(null);
   const [deletingSellerId, setDeletingSellerId] = useState(null);
-  const [selectedSaleItemId, setSelectedSaleItemId] = useState(null);
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
   const [sellers, setSellers] = useState([]);
@@ -58,10 +57,6 @@ export default function SellScreen() {
   const [activeTab, setActiveTab] = useState('create');
   const [productSearchQuery, setProductSearchQuery] = useState('');
 
-  const tableHead = ['ক্রেতা', 'পেইড এমাউন্ট', 'তারিখ', 'অ্যাকশন'];
-  const modalTableHead = ['পণ্য', 'পরিমাণ', 'মুছুন'];
-  const sellerTableHead = ['নাম', 'অ্যাকশন'];
-
   const showToast = (message, type = 'success') => {
     Toast.show({type, text1: message, position: 'bottom'});
   };
@@ -74,13 +69,11 @@ export default function SellScreen() {
     setIsLoading(true);
     try {
       const response = await api.get('/api/sell');
-      const fetchedSales = Array.isArray(response.data.data)
-        ? response.data.data
-        : [];
-      setSales(fetchedSales);
+      const fetched = Array.isArray(response.data.data) ? response.data.data : [];
+      setSales(fetched);
     } catch (error) {
       setSales([]);
-      showToast('বিক্রয় লোড করতে ব্যর্থ', 'error');
+      showToast('বিক্রয় লোড করতে ব্যর্থ', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -90,11 +83,8 @@ export default function SellScreen() {
     setIsFetchingProducts(true);
     try {
       const response = await api.get('/api/Product/GetProductListForSell');
-      const fetchedProducts = Array.isArray(response.data.data)
-        ? response.data.data
-        : [];
-      setProducts(fetchedProducts);
-      setSaleItems([{id: Date.now(), productId: '', quantity: ''}]);
+      const fetched = Array.isArray(response.data.data) ? response.data.data : [];
+      setProducts(fetched);
     } catch (error) {
       setProducts([]);
       showToast('পণ্য তালিকা লোড করতে ব্যর্থ', 'error');
@@ -107,12 +97,10 @@ export default function SellScreen() {
     setIsFetchingSellers(true);
     try {
       const response = await api.get('/api/seller');
-      const fetchedSellers = Array.isArray(response.data.data)
-        ? response.data.data
-        : [];
-      setSellers(fetchedSellers);
-      if (fetchedSellers.length > 0 && !seller) {
-        setSeller(fetchedSellers[0].id);
+      const fetched = Array.isArray(response.data.data) ? response.data.data : [];
+      setSellers(fetched);
+      if (fetched.length > 0 && !seller) {
+        setSeller(fetched[0].id);
       }
     } catch (error) {
       setSellers([]);
@@ -127,7 +115,6 @@ export default function SellScreen() {
       setNewSellerError('বিক্রেতার নাম প্রয়োজন');
       return;
     }
-
     setIsCreatingSeller(true);
     try {
       const response = await api.post('/api/seller', {sellerName: newSellerName});
@@ -155,7 +142,6 @@ export default function SellScreen() {
       setEditingSellerError('বিক্রেতার নাম প্রয়োজন');
       return;
     }
-
     setIsUpdatingSeller(true);
     try {
       const response = await api.put(`/api/seller/${sellerId}`, {
@@ -180,7 +166,6 @@ export default function SellScreen() {
 
   const deleteSeller = async () => {
     if (!deletingSellerId) return;
-
     try {
       await api.delete(`/api/seller/${deletingSellerId}`);
       showToast('বিক্রেতা সফলভাবে মুছে ফেলা হয়েছে', 'success');
@@ -205,14 +190,10 @@ export default function SellScreen() {
       setSelectedSaleDetails(response.data.data);
       setViewModalVisible(true);
     } catch (error) {
-      showToast('বিক্রয় বিবরণ লোড করতে ব্যর্থ', 'error');
+      showToast('বিক্রয় বিবরণ লোড করতে ব্যর্থ', 'error');
     } finally {
       setIsViewLoading(false);
     }
-  };
-
-  const handleReload = async () => {
-    await fetchSales();
   };
 
   const handleAddSale = async () => {
@@ -225,140 +206,46 @@ export default function SellScreen() {
     setDiscountAmount('');
     setSellerError('');
     setQuantityError('');
+    setSaleItems([]);
+    setProductSearchQuery('');
     await Promise.all([fetchProductsForSell(), fetchSellers()]);
   };
 
-  const handleDelete = index => {
-    const saleId = sales[index].id;
+  const handleDelete = saleId => {
     setSelectedSaleId(saleId);
     setDeleteModalVisible(true);
-    setSelectedSaleItemId(null);
   };
 
   const confirmDelete = async () => {
     if (!selectedSaleId) return;
-
     try {
       await api.delete(`/api/sell/${selectedSaleId}`);
       setSales(sales.filter(sale => sale.id !== selectedSaleId));
-      showToast('বিক্রয় সফলভাবে মুছে ফেলা হয়েছে', 'success');
+      showToast('বিক্রয় সফলভাবে মুছে ফেলা হয়েছে', 'success');
     } catch (error) {
-      showToast('বিক্রয় মুছতে ব্যর্থ', 'error');
+      showToast('বিক্রয় মুছতে ব্যর্থ', 'error');
     } finally {
       setDeleteModalVisible(false);
       setSelectedSaleId(null);
     }
   };
 
-  const tableData = sales.map((item, index) => [
-    item.customerName || '-',
-    item.paid || 0,
-    item.createdTime ? item.createdTime : '-',
-    <View style={styles.actionCell}>
-      <Pressable onPress={() => fetchSaleDetails(item.id)}>
-        <Ionicons
-          name="eye-outline"
-          size={20}
-          color={COLORS.PRIMARY}
-          style={styles.actionIcon}
-        />
-      </Pressable>
-      <Pressable onPress={() => handleDelete(index)}>
-        <Ionicons
-          name="trash-outline"
-          size={20}
-          color="red"
-          style={styles.actionIcon}
-        />
-      </Pressable>
-    </View>,
-  ]);
-
-  const sellerTableData = sellers.map(seller => [
-    editingSellerId === seller.id ? (
-      <View style={styles.editContainer}>
-        <TextInput
-          style={styles.slimInput}
-          value={editingSellerName}
-          onChangeText={text => {
-            setEditingSellerName(text);
-            setEditingSellerError('');
-          }}
-          autoFocus
-        />
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => updateSeller(seller.id)}
-          disabled={isUpdatingSeller}>
-          <Ionicons
-            name="checkmark"
-            size={20}
-            color={isUpdatingSeller ? 'gray' : COLORS.PRIMARY}
-          />
-        </Pressable>
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => {
-            setEditingSellerId(null);
-            setEditingSellerName('');
-            setEditingSellerError('');
-          }}
-          disabled={isUpdatingSeller}>
-          <Ionicons
-            name="close"
-            size={20}
-            color={isUpdatingSeller ? 'gray' : 'red'}
-          />
-        </Pressable>
-      </View>
-    ) : (
-      seller.sellerName
-    ),
-    <View style={styles.actionCell}>
-      <Pressable
-        onPress={() => {
-          setEditingSellerId(seller.id);
-          setEditingSellerName(seller.sellerName);
-          setEditingSellerError('');
-        }}
-        disabled={editingSellerId !== null}>
-        <Ionicons
-          name="pencil-outline"
-          size={20}
-          color={editingSellerId !== null ? 'gray' : COLORS.PRIMARY}
-          style={styles.actionIcon}
-        />
-      </Pressable>
-      <Pressable
-        onPress={() => {
-          setDeletingSellerId(seller.id);
-          setSellerDeleteModalVisible(true);
-        }}
-        disabled={editingSellerId !== null}>
-        <Ionicons
-          name="trash-outline"
-          size={20}
-          color={editingSellerId !== null ? 'gray' : 'red'}
-          style={styles.actionIcon}
-        />
-      </Pressable>
-    </View>,
-  ]);
-
-  const addSaleItem = () => {
-    setSaleItems([
-      ...saleItems,
-      {id: Date.now(), productId: '', quantity: ''},
-    ]);
+  const toggleProduct = product => {
+    const existing = saleItems.find(i => i.productId === product.id);
+    if (existing) {
+      setSaleItems(saleItems.filter(i => i.productId !== product.id));
+    } else {
+      setSaleItems([
+        ...saleItems,
+        {id: product.id, productId: product.id, quantity: '1'},
+      ]);
+    }
+    setQuantityError('');
   };
 
-  const removeSaleItem = id => {
-    setSaleItems(saleItems.filter(item => item.id !== id));
-  };
-
-  const updateSaleItem = (id, key, value) => {
+  const updateProductQty = (productId, qty) => {
     setSaleItems(
-      saleItems.map(item => (item.id === id ? {...item, [key]: value} : item)),
+      saleItems.map(i => (i.productId === productId ? {...i, quantity: qty} : i)),
     );
     setQuantityError('');
   };
@@ -377,15 +264,19 @@ export default function SellScreen() {
   const handleSubmit = async () => {
     let hasError = false;
 
-    const invalidItems = saleItems.some(
-      item =>
-        !item.productId || !item.quantity || parseFloat(item.quantity) <= 0,
-    );
-    if (invalidItems) {
-      setQuantityError('অন্তত একটি পণ্যের জন্য বৈধ পরিমাণ প্রয়োজন');
+    if (saleItems.length === 0) {
+      setQuantityError('কমপক্ষে একটি পণ্য নির্বাচন করুন');
       hasError = true;
     } else {
-      setQuantityError('');
+      const invalidItems = saleItems.some(
+        item => !item.quantity || parseFloat(item.quantity) <= 0,
+      );
+      if (invalidItems) {
+        setQuantityError('নির্বাচিত সব পণ্যের জন্য সঠিক পরিমাণ দিন');
+        hasError = true;
+      } else {
+        setQuantityError('');
+      }
     }
 
     if (!seller) {
@@ -431,16 +322,14 @@ export default function SellScreen() {
 
       const response = await api.post('/api/sell', payload);
       if (response.data.success) {
-        showToast('বিক্রয় যোগ করা হয়েছে');
+        showToast('বিক্রয় যোগ করা হয়েছে');
       } else {
         showToast('Something went wrong', 'error');
       }
-      const newSales = Array.isArray(response.data.data)
-        ? response.data.data
-        : [];
+      const newSales = Array.isArray(response.data.data) ? response.data.data : [];
       setSales(prevSales => [...prevSales, ...newSales]);
 
-      await handleReload();
+      await fetchSales();
       setModalVisible(false);
       setSaleItems([]);
       setDiscountAmount('');
@@ -451,94 +340,74 @@ export default function SellScreen() {
     }
   };
 
-  const modalTableData = saleItems.map(item => {
-    const selectedProduct = products.find(p => p.id === item.productId);
-    return [
-      <Pressable
-        style={styles.productPickerContainer}
-        onPress={() => {
-          setSelectedSaleItemId(item.id);
-          setProductModalVisible(true);
-          setProductSearchQuery('');
-        }}
-        disabled={isSubmitting}>
-        <Text style={styles.productPickerText}>
-          {selectedProduct
-            ? `${selectedProduct.name}-${selectedProduct.stockQty}-${selectedProduct.sellingRate}`
-            : 'পণ্য নির্বাচন করুন'}
-        </Text>
-        <Ionicons name="chevron-down" size={16} color={COLORS.PRIMARY} />
-      </Pressable>,
-      <TextInput
-        style={styles.slimInput}
-        placeholder="পরিমাণ"
-        placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-        value={item.quantity}
-        onChangeText={text => updateSaleItem(item.id, 'quantity', text)}
-        keyboardType="numeric"
-      />,
-      <View style={styles.trashCell}>
-        {saleItems.length > 1 && (
-          <Pressable onPress={() => removeSaleItem(item.id)}>
-            <Ionicons name="trash-outline" size={16} color="red" />
-          </Pressable>
-        )}
-      </View>,
-    ];
-  });
+  const visibleProducts = (products || []).filter(p =>
+    p.name.toLowerCase().includes(productSearchQuery.toLowerCase()),
+  );
 
   return (
-    <View style={{flex: 1, padding: 10}}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.totalCount}>মোট বিক্রয়: {sales.length}</Text>
-        <Pressable
-          style={styles.reloadButton}
-          onPress={handleReload}
-          disabled={isLoading}>
-          <Ionicons
-            name="reload"
-            size={20}
-            color={isLoading ? 'gray' : COLORS.PRIMARY}
-          />
-          <Text
-            style={[
-              styles.reloadText,
-              {color: isLoading ? 'gray' : COLORS.PRIMARY},
-            ]}>
-            রিফ্রেশ
-          </Text>
-        </Pressable>
+    <View style={styles.page}>
+      <View style={styles.countRow}>
+        <Text style={styles.countText}>মোট বিক্রয়: {sales.length}</Text>
       </View>
 
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-          <Text style={styles.loadingText}>বিক্রয় লোড হচ্ছে...</Text>
-        </View>
-      ) : sales.length === 0 ? (
-        <NoDataFound title="বিক্রয়" />
+      {isLoading && sales.length === 0 ? (
+        <LoadingContainer />
       ) : (
-        <Table borderStyle={{borderWidth: 1, borderColor: '#ccc'}}>
-          <Row
-            data={tableHead}
-            style={styles.head}
-            textStyle={styles.headText}
-          />
-          <Rows data={tableData} textStyle={styles.text} />
-        </Table>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={fetchSales}
+              colors={['#1D2A74']}
+            />
+          }>
+          {sales.length === 0 ? (
+            <NoDataFound title="বিক্রয়" icon="receipt-outline" />
+          ) : (
+            sales.map(item => (
+              <View key={item.id} style={styles.saleCard}>
+                <View style={styles.saleCardLeft}>
+                  <Text style={styles.saleCustomer}>
+                    {item.customerName || 'অজানা ক্রেতা'}
+                  </Text>
+                  <Text style={styles.saleDate}>{item.createdTime || '-'}</Text>
+                  <View style={styles.salePaidPill}>
+                    <Text style={styles.salePaidLabel}>পেইড</Text>
+                    <Text style={styles.salePaidValue}>৳ {item.paid || 0}</Text>
+                  </View>
+                </View>
+                <View style={styles.saleCardActions}>
+                  <TouchableOpacity
+                    style={styles.viewBtn}
+                    onPress={() => fetchSaleDetails(item.id)}>
+                    <Ionicons name="eye-outline" size={18} color="#1D2A74" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDelete(item.id)}>
+                    <Ionicons name="trash-outline" size={18} color="#E43A3A" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
       )}
 
       <FAB
         visible={true}
-        title="বিক্রয় যোগ করুন"
+        title="বিক্রয় যোগ করুন"
         icon={{name: 'add', color: 'white'}}
-        color={COLORS.PRIMARY}
+        color="#1D2A74"
         placement="right"
         style={{marginBottom: 50}}
         onPress={handleAddSale}
-        disabled={isFetchingProducts || isSubmitting}
+        disabled={isSubmitting}
       />
 
+      {/* ── Add Sale Modal ── */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -546,199 +415,367 @@ export default function SellScreen() {
         onRequestClose={() => {
           if (!isFetchingProducts && !isSubmitting) setModalVisible(false);
         }}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeaderContainer}>
-              <Text style={styles.modalTitle}>নতুন বিক্রয় যোগ করুন</Text>
-            </View>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>নতুন বিক্রয়</Text>
 
             {isFetchingProducts || isFetchingSellers ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-                <Text style={styles.loadingText}>
-                  পণ্য এবং বিক্রেতা লোড হচ্ছে...
-                </Text>
+              <View style={styles.centeredLoader}>
+                <ActivityIndicator size="large" color="#1D2A74" />
+                <Text style={styles.loaderText}>লোড হচ্ছে...</Text>
               </View>
             ) : products.length === 0 ? (
-              <>
-                <Text style={[styles.noDataText, {color: 'red'}]}>
-                  কোনো পণ্য যোগ করা নেই, স্টক ম্যানেজার থেকে প্রথমে পণ্য যোগ
-                  করুন।
+              <View style={styles.emptyNotice}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={40}
+                  color="#E43A3A"
+                />
+                <Text style={styles.emptyNoticeText}>
+                  কোনো পণ্য যোগ করা নেই। স্টক ম্যানেজার থেকে পণ্য যোগ করুন।
                 </Text>
-                <View style={styles.buttonContainer}>
-                  <Pressable
-                    style={[styles.button, {backgroundColor: 'gray'}]}
-                    onPress={() => setModalVisible(false)}
-                    disabled={isSubmitting}>
-                    <Text style={styles.buttonText}>বাতিল</Text>
-                  </Pressable>
-                </View>
-              </>
+                <TouchableOpacity
+                  style={styles.cancelBtnFull}
+                  onPress={() => setModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>বাতিল</Text>
+                </TouchableOpacity>
+              </View>
             ) : sellers.length === 0 ? (
-              <>
-                <Text style={[styles.noDataText, {color: 'red'}]}>
-                  কোনো বিক্রেতা পাওয়া যায়নি, প্রথমে বিক্রেতা যোগ করুন।
+              <View style={styles.emptyNotice}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={40}
+                  color="#E43A3A"
+                />
+                <Text style={styles.emptyNoticeText}>
+                  কোনো বিক্রেতা পাওয়া যায়নি। প্রথমে বিক্রেতা যোগ করুন।
                 </Text>
-                <View style={styles.buttonContainer}>
-                  <Pressable
-                    style={[styles.button, {backgroundColor: 'gray'}]}
-                    onPress={() => setModalVisible(false)}
-                    disabled={isSubmitting}>
-                    <Text style={styles.buttonText}>বাতিল</Text>
-                  </Pressable>
-                </View>
-              </>
+                <TouchableOpacity
+                  style={styles.cancelBtnFull}
+                  onPress={() => setModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>বাতিল</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <>
-                <View style={styles.addNewButtonContainer}>
-                  <Button
-                    title="+ বিক্রয় করা পণ্য যোগ করুন "
-                    buttonStyle={styles.addNewButton}
-                    titleStyle={styles.addNewText}
-                    onPress={addSaleItem}
-                    disabled={isSubmitting}
-                  />
-                </View>
-                <Table borderStyle={{borderWidth: 1, borderColor: '#ccc'}}>
-                  <Row
-                    data={modalTableHead}
-                    style={styles.slimModalHead}
-                    textStyle={styles.slimHeadText}
-                    widthArr={['50%', '35%', '15%']}
-                  />
-                  <Rows
-                    data={modalTableData}
-                    style={styles.slimRow}
-                    widthArr={['50%', '35%', '15%']}
-                  />
-                </Table>
-                {quantityError ? (
-                  <Text style={styles.errorText}>{quantityError}</Text>
-                ) : null}
+              <ScrollView
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled">
 
-                <View style={styles.inputContainer}>
-                  <View style={styles.sellerPickerContainer}>
-                    <View style={[styles.slimPickerContainer, {flex: 1}]}>
-                      <Picker
-                        selectedValue={seller}
-                        style={styles.slimUnitPicker}
-                        onValueChange={value => {
-                          setSeller(value);
-                          setSellerError('');
-                        }}
-                        enabled={!isSubmitting}
-                        mode="dropdown"
-                        accessibilityLabel="বিক্রেতা নির্বাচন করুন">
-                        {sellers.map(seller => (
-                          <Picker.Item
-                            key={seller.id}
-                            label={seller.sellerName}
-                            value={seller.id}
-                          />
-                        ))}
-                      </Picker>
+                {/* ── Seller ── */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>বিক্রেতা</Text>
+                  <View style={styles.sellerInputRow}>
+                    <View style={styles.sellerInputBox}>
+                      <MaterialCommunityIcons
+                        name="account-tie"
+                        size={22}
+                        color="#7B7C8E"
+                      />
+                      <View style={styles.sellerPickerWrap}>
+                        <Picker
+                          selectedValue={seller}
+                          style={styles.sellerPicker}
+                          onValueChange={val => {
+                            setSeller(val);
+                            setSellerError('');
+                          }}
+                          enabled={!isSubmitting}
+                          mode="dropdown">
+                          {sellers.map(s => (
+                            <Picker.Item
+                              key={s.id}
+                              label={s.sellerName}
+                              value={s.id}
+                            />
+                          ))}
+                        </Picker>
+                      </View>
                     </View>
-                    <Pressable
-                      style={styles.addSellerButton}
+                    <TouchableOpacity
+                      style={styles.addSellerIconBtn}
                       onPress={() => {
                         setNewSellerModalVisible(true);
                         setActiveTab('create');
                         fetchSellers();
                       }}
                       disabled={isSubmitting}>
-                      <Ionicons name="add" size={24} color={COLORS.PRIMARY} />
-                    </Pressable>
+                      <Ionicons name="person-add-outline" size={20} color="#1D2A74" />
+                    </TouchableOpacity>
                   </View>
                   {sellerError ? (
                     <Text style={styles.errorText}>{sellerError}</Text>
                   ) : null}
+                </View>
+
+                {/* ── Product Selection ── */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>পণ্য নির্বাচন</Text>
+                  <View style={styles.selectionCard}>
+                    {/* Search */}
+                    <View style={styles.productSearchBox}>
+                      <Ionicons
+                        name="search-outline"
+                        size={18}
+                        color="#777A89"
+                      />
+                      <TextInput
+                        style={styles.productSearchInput}
+                        value={productSearchQuery}
+                        onChangeText={setProductSearchQuery}
+                        placeholder="পণ্য খুঁজুন..."
+                        placeholderTextColor="#7D8090"
+                      />
+                      {productSearchQuery.length > 0 && (
+                        <TouchableOpacity
+                          onPress={() => setProductSearchQuery('')}>
+                          <Ionicons
+                            name="close-circle"
+                            size={16}
+                            color="#8A92B8"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {visibleProducts.length === 0 ? (
+                      <Text style={styles.emptyStateText}>
+                        কোনো পণ্য পাওয়া যায়নি।
+                      </Text>
+                    ) : (
+                      visibleProducts.map(product => {
+                        const isSelected = saleItems.some(
+                          i => i.productId === product.id,
+                        );
+                        const selectedItem = saleItems.find(
+                          i => i.productId === product.id,
+                        );
+                        return (
+                          <View key={product.id}>
+                            <TouchableOpacity
+                              style={[
+                                styles.productRow,
+                                isSelected && styles.productRowActive,
+                              ]}
+                              activeOpacity={0.85}
+                              onPress={() => toggleProduct(product)}
+                              disabled={isSubmitting}>
+                              <View style={styles.productLeft}>
+                                <View
+                                  style={[
+                                    styles.checkbox,
+                                    isSelected && styles.checkboxActive,
+                                  ]}>
+                                  {isSelected && (
+                                    <Ionicons
+                                      name="checkmark"
+                                      size={14}
+                                      color="#FFFFFF"
+                                    />
+                                  )}
+                                </View>
+                                <Text style={styles.productName}>
+                                  {product.name}
+                                </Text>
+                              </View>
+                              <Text style={styles.productPrice}>
+                                ৳{product.sellingRate}/
+                                {product.unit || 'পিস'}
+                              </Text>
+                            </TouchableOpacity>
+
+                            {isSelected && (
+                              <View style={styles.qtyRow}>
+                                <Ionicons
+                                  name="layers-outline"
+                                  size={16}
+                                  color="#8A92B8"
+                                  style={styles.qtyIcon}
+                                />
+                                <TextInput
+                                  style={styles.qtyInput}
+                                  placeholder="পরিমাণ লিখুন"
+                                  placeholderTextColor="#999AA8"
+                                  value={selectedItem?.quantity || ''}
+                                  onChangeText={txt =>
+                                    updateProductQty(product.id, txt)
+                                  }
+                                  keyboardType="decimal-pad"
+                                  editable={!isSubmitting}
+                                />
+                                <Text style={styles.qtyUnit}>
+                                  {product.unit || 'পিস'}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })
+                    )}
+                  </View>
+                  {quantityError ? (
+                    <Text style={styles.errorText}>{quantityError}</Text>
+                  ) : null}
+                </View>
+
+                {/* ── Payment Type ── */}
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>পেমেন্ট ধরন</Text>
+                  <View style={styles.paymentRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.paymentButton,
+                        !isDue && styles.paymentButtonActive,
+                      ]}
+                      activeOpacity={0.85}
+                      onPress={() => setIsDue(false)}
+                      disabled={isSubmitting}>
+                      <MaterialCommunityIcons
+                        name="cash-multiple"
+                        size={24}
+                        color={!isDue ? '#101A79' : '#4B4E60'}
+                      />
+                      <Text
+                        style={
+                          !isDue ? styles.paymentTextActive : styles.paymentText
+                        }>
+                        নগদ
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.paymentButton,
+                        isDue && styles.paymentButtonActive,
+                      ]}
+                      activeOpacity={0.85}
+                      onPress={() => setIsDue(true)}
+                      disabled={isSubmitting}>
+                      <MaterialCommunityIcons
+                        name="wallet-outline"
+                        size={24}
+                        color={isDue ? '#101A79' : '#4B4E60'}
+                      />
+                      <Text
+                        style={
+                          isDue ? styles.paymentTextActive : styles.paymentText
+                        }>
+                        বাকি
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* ── Summary Banner ── */}
+                <View style={styles.summaryBanner}>
+                  <Text style={styles.summaryLabel}>নির্বাচিত পণ্য</Text>
+                  <Text style={styles.summaryValue}>{saleItems.length}</Text>
+                  <Text style={styles.summaryLabel}>মোট</Text>
+                  <Text style={styles.summaryValue}>
+                    ৳ {calculateSellingAmount()}
+                  </Text>
+                </View>
+
+                <View style={styles.divider} />
+
+                {/* ── Buyer Info ── */}
+                <View style={styles.formSection}>
+                  <View style={styles.infoTitleRow}>
+                    <MaterialCommunityIcons
+                      name="file-document-edit-outline"
+                      size={18}
+                      color="#101A79"
+                    />
+                    <Text style={styles.infoTitle}>ক্রেতার তথ্য</Text>
+                  </View>
+
+                  <Text style={styles.smallLabel}>ক্রেতার নাম</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="ক্রেতা"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
+                    style={styles.textInput}
                     value={buyer}
                     onChangeText={setBuyer}
+                    placeholder="নাম লিখুন"
+                    placeholderTextColor="#888A99"
                     editable={!isSubmitting}
                   />
+
+                  <Text style={styles.smallLabel}>মোবাইল নম্বর</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="ক্রেতা ফোন"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
+                    style={styles.textInput}
                     value={buyerPhone}
                     onChangeText={setBuyerPhone}
+                    placeholder="০১XXXXXXXXX"
+                    placeholderTextColor="#888A99"
                     keyboardType="phone-pad"
                     editable={!isSubmitting}
                   />
-                  <View style={styles.checkboxContainer}>
-                    <Pressable
-                      onPress={() => setIsDue(!isDue)}
-                      style={styles.checkbox}
-                      disabled={isSubmitting}>
-                      <Ionicons
-                        name={isDue ? 'checkbox' : 'checkbox-outline'}
-                        size={20}
-                        color={COLORS.PRIMARY}
-                      />
-                      <Text style={styles.checkboxLabel}>বাকি</Text>
-                    </Pressable>
-                    {isDue && (
-                      <TextInput
-                        style={[styles.input, {width: '100%'}]}
-                        placeholder="বাকির পরিমাণ"
-                        placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-                        value={dueAmount}
-                        onChangeText={setDueAmount}
-                        keyboardType="numeric"
-                        editable={!isSubmitting}
-                      />
-                    )}
-                  </View>
+
+                  <Text style={styles.smallLabel}>
+                    বাকি পরিমাণ (যদি প্রযোজ্য হয়)
+                  </Text>
                   <TextInput
-                    style={[styles.input, styles.readonlyInput]}
-                    placeholder="বিক্রয় মূল্য"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-                    value={calculateSellingAmount()}
-                    editable={false}
+                    style={[
+                      styles.textInput,
+                      !isDue && styles.textInputDisabled,
+                    ]}
+                    value={dueAmount}
+                    onChangeText={setDueAmount}
+                    placeholder="৳ ০.০০"
+                    placeholderTextColor="#888A99"
+                    keyboardType="numeric"
+                    editable={isDue && !isSubmitting}
                   />
+
+                  <Text style={styles.smallLabel}>ডিসকাউন্ট (ঐচ্ছিক)</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="ডিসকাউন্ট পরিমাণ"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
+                    style={styles.textInput}
                     value={discountAmount}
                     onChangeText={setDiscountAmount}
+                    placeholder="৳ ০.০০"
+                    placeholderTextColor="#888A99"
                     keyboardType="numeric"
                     editable={!isSubmitting}
                   />
                 </View>
 
-                <View style={styles.buttonContainer}>
-                  <Pressable
-                    style={[styles.button, {backgroundColor: 'gray'}]}
-                    onPress={() => setModalVisible(false)}
-                    disabled={isSubmitting}>
-                    <Text style={styles.buttonText}>বাতিল</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.button,
-                      {backgroundColor: COLORS.PRIMARY},
-                      isSubmitting && styles.disabledButton,
-                    ]}
-                    onPress={handleSubmit}
-                    disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <Text style={styles.buttonText}>সংরক্ষণ করুন</Text>
-                    )}
-                  </Pressable>
-                </View>
-              </>
+                {/* ── Submit ── */}
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    isSubmitting && styles.submitButtonDisabled,
+                  ]}
+                  activeOpacity={0.9}
+                  onPress={handleSubmit}
+                  disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <View style={styles.submitIconWrap}>
+                        <Ionicons
+                          name="checkmark"
+                          size={18}
+                          color="#101A79"
+                        />
+                      </View>
+                      <Text style={styles.submitText}>বিক্রি সম্পন্ন</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.cancelBtnFull, {marginTop: 12, marginBottom: 8}]}
+                  onPress={() => setModalVisible(false)}
+                  disabled={isSubmitting}>
+                  <Text style={styles.cancelBtnText}>বাতিল</Text>
+                </TouchableOpacity>
+              </ScrollView>
             )}
           </View>
         </View>
       </Modal>
 
+      {/* ── Seller Management Modal ── */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -754,20 +791,16 @@ export default function SellScreen() {
             setEditingSellerError('');
           }
         }}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeaderContainer}>
-              <Text style={styles.modalTitle}>
-                {activeTab === 'create'
-                  ? 'নতুন বিক্রেতা যোগ করুন'
-                  : 'বিক্রেতা তালিকা'}
-              </Text>
-            </View>
-            <View style={styles.tabContainer}>
-              <Pressable
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>বিক্রেতা ব্যবস্থাপনা</Text>
+
+            <View style={styles.tabRow}>
+              <TouchableOpacity
                 style={[
-                  styles.tabButton,
-                  activeTab === 'create' && styles.activeTab,
+                  styles.tabBtn,
+                  activeTab === 'create' && styles.tabBtnActive,
                 ]}
                 onPress={() => {
                   setActiveTab('create');
@@ -778,15 +811,15 @@ export default function SellScreen() {
                 <Text
                   style={[
                     styles.tabText,
-                    activeTab === 'create' && styles.activeTabText,
+                    activeTab === 'create' && styles.tabTextActive,
                   ]}>
                   নতুন বিক্রেতা
                 </Text>
-              </Pressable>
-              <Pressable
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.tabButton,
-                  activeTab === 'list' && styles.activeTab,
+                  styles.tabBtn,
+                  activeTab === 'list' && styles.tabBtnActive,
                 ]}
                 onPress={() => {
                   setActiveTab('list');
@@ -795,220 +828,317 @@ export default function SellScreen() {
                 <Text
                   style={[
                     styles.tabText,
-                    activeTab === 'list' && styles.activeTabText,
+                    activeTab === 'list' && styles.tabTextActive,
                   ]}>
                   বিক্রেতা তালিকা
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
 
             {activeTab === 'create' ? (
-              <>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="বিক্রেতার নাম"
-                    placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-                    value={newSellerName}
-                    onChangeText={text => {
-                      setNewSellerName(text);
-                      setNewSellerError('');
-                    }}
-                    editable={!isCreatingSeller}
-                  />
-                  {newSellerError ? (
-                    <Text style={styles.errorText}>{newSellerError}</Text>
-                  ) : null}
-                </View>
-                <View style={styles.buttonContainer}>
-                  <Pressable
-                    style={[styles.button, {backgroundColor: 'gray'}]}
+              <View>
+                <Text style={styles.smallLabel}>বিক্রেতার নাম *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="বিক্রেতার নাম লিখুন"
+                  placeholderTextColor="#888A99"
+                  value={newSellerName}
+                  onChangeText={text => {
+                    setNewSellerName(text);
+                    setNewSellerError('');
+                  }}
+                  editable={!isCreatingSeller}
+                />
+                {newSellerError ? (
+                  <Text style={styles.errorText}>{newSellerError}</Text>
+                ) : null}
+                <View style={styles.sheetActions}>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
                     onPress={() => {
                       setNewSellerModalVisible(false);
                       setNewSellerName('');
                       setNewSellerError('');
                     }}
                     disabled={isCreatingSeller}>
-                    <Text style={styles.buttonText}>বাতিল</Text>
-                  </Pressable>
-                  <Pressable
+                    <Text style={styles.cancelBtnText}>বাতিল</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[
-                      styles.button,
-                      {backgroundColor: COLORS.PRIMARY},
-                      isCreatingSeller && styles.disabledButton,
+                      styles.saveBtn,
+                      isCreatingSeller && styles.submitButtonDisabled,
                     ]}
                     onPress={createSeller}
                     disabled={isCreatingSeller}>
                     {isCreatingSeller ? (
-                      <ActivityIndicator size="small" color="white" />
+                      <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.buttonText}>সংরক্ষণ করুন</Text>
+                      <Text style={styles.saveBtnText}>সংরক্ষণ করুন</Text>
                     )}
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
-              </>
+              </View>
             ) : (
-              <>
+              <View>
                 {isFetchingSellers ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-                    <Text style={styles.loadingText}>
-                      বিক্রেতা তালিকা লোড হচ্ছে...
-                    </Text>
-                  </View>
+                  <LoadingContainer />
                 ) : sellers.length === 0 ? (
-                  <Text style={[styles.noDataText, {color: 'red'}]}>
-                    কোনো বিক্রেতা পাওয়া যায়নি
-                  </Text>
+                  <NoDataFound title="বিক্রেতা" icon="person-outline" />
                 ) : (
-                  <>
-                    <Table borderStyle={{borderWidth: 1, borderColor: '#ccc'}}>
-                      <Row
-                        data={sellerTableHead}
-                        style={styles.head}
-                        textStyle={styles.headText}
-                        widthArr={['70%', '30%']}
-                      />
-                      <Rows
-                        data={sellerTableData}
-                        textStyle={styles.text}
-                        widthArr={['70%', '30%']}
-                      />
-                    </Table>
-                    {editingSellerError ? (
-                      <Text style={styles.errorText}>{editingSellerError}</Text>
-                    ) : null}
-                  </>
+                  <ScrollView
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={false}
+                    style={styles.sellerList}>
+                    {sellers.map(s => (
+                      <View key={s.id} style={styles.sellerRow}>
+                        {editingSellerId === s.id ? (
+                          <>
+                            <View style={styles.sellerEditRow}>
+                              <TextInput
+                                style={[
+                                  styles.textInput,
+                                  {flex: 1, marginRight: 8, marginBottom: 0},
+                                ]}
+                                value={editingSellerName}
+                                onChangeText={text => {
+                                  setEditingSellerName(text);
+                                  setEditingSellerError('');
+                                }}
+                                autoFocus
+                              />
+                              <TouchableOpacity
+                                onPress={() => updateSeller(s.id)}
+                                disabled={isUpdatingSeller}>
+                                <Ionicons
+                                  name="checkmark-circle"
+                                  size={26}
+                                  color={
+                                    isUpdatingSeller ? '#ccc' : '#1B792E'
+                                  }
+                                />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={{marginLeft: 6}}
+                                onPress={() => {
+                                  setEditingSellerId(null);
+                                  setEditingSellerName('');
+                                  setEditingSellerError('');
+                                }}
+                                disabled={isUpdatingSeller}>
+                                <Ionicons
+                                  name="close-circle"
+                                  size={26}
+                                  color={
+                                    isUpdatingSeller ? '#ccc' : '#E43A3A'
+                                  }
+                                />
+                              </TouchableOpacity>
+                            </View>
+                            {editingSellerError ? (
+                              <Text style={styles.errorText}>
+                                {editingSellerError}
+                              </Text>
+                            ) : null}
+                          </>
+                        ) : (
+                          <View style={styles.sellerViewRow}>
+                            <Text style={styles.sellerName}>
+                              {s.sellerName}
+                            </Text>
+                            <View style={styles.sellerBtns}>
+                              <TouchableOpacity
+                                style={styles.editBtn}
+                                onPress={() => {
+                                  setEditingSellerId(s.id);
+                                  setEditingSellerName(s.sellerName);
+                                  setEditingSellerError('');
+                                }}
+                                disabled={editingSellerId !== null}>
+                                <Ionicons
+                                  name="pencil-outline"
+                                  size={16}
+                                  color={
+                                    editingSellerId !== null
+                                      ? '#ccc'
+                                      : '#1D2A74'
+                                  }
+                                />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.deleteBtn}
+                                onPress={() => {
+                                  setDeletingSellerId(s.id);
+                                  setSellerDeleteModalVisible(true);
+                                }}
+                                disabled={editingSellerId !== null}>
+                                <Ionicons
+                                  name="trash-outline"
+                                  size={16}
+                                  color={
+                                    editingSellerId !== null
+                                      ? '#ccc'
+                                      : '#E43A3A'
+                                  }
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </ScrollView>
                 )}
-                <View style={styles.buttonContainer}>
-                  <Pressable
-                    style={[styles.button, {backgroundColor: 'gray'}]}
-                    onPress={() => {
-                      setNewSellerModalVisible(false);
-                      setActiveTab('create');
-                      setEditingSellerId(null);
-                      setEditingSellerName('');
-                      setEditingSellerError('');
-                    }}
-                    disabled={isFetchingSellers || isUpdatingSeller}>
-                    <Text style={styles.buttonText}>বন্ধ করুন</Text>
-                  </Pressable>
-                </View>
-              </>
+                <TouchableOpacity
+                  style={[styles.cancelBtnFull, {marginTop: 16}]}
+                  onPress={() => {
+                    setNewSellerModalVisible(false);
+                    setActiveTab('create');
+                    setEditingSellerId(null);
+                    setEditingSellerName('');
+                    setEditingSellerError('');
+                  }}
+                  disabled={isFetchingSellers || isUpdatingSeller}>
+                  <Text style={styles.cancelBtnText}>বন্ধ করুন</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
       </Modal>
 
+      {/* ── View Sale Details Modal ── */}
       <Modal
         animationType="slide"
         transparent={true}
-        visible={productModalVisible}
-        onRequestClose={() => {
-          if (!isSubmitting) {
-            setProductModalVisible(false);
-            setProductSearchQuery('');
-            setSelectedSaleItemId(null);
-          }
-        }}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeaderContainer}>
-              <Text style={styles.modalTitle}>পণ্য নির্বাচন করুন</Text>
-            </View>
+        visible={viewModalVisible}
+        onRequestClose={() => setViewModalVisible(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>বিক্রয় বিবরণ</Text>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="পণ্য অনুসন্ধান করুন"
-                placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-                value={productSearchQuery}
-                onChangeText={text => setProductSearchQuery(text)}
-              />
-            </View>
+            {isViewLoading ? (
+              <LoadingContainer />
+            ) : selectedSaleDetails ? (
+              <ScrollView
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}>
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>ক্রেতার তথ্য</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>নাম</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedSaleDetails.customerName || '-'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>ফোন</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedSaleDetails.customerPhone || '-'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>তারিখ</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedSaleDetails.createdTime || '-'}
+                    </Text>
+                  </View>
+                </View>
 
-            {isFetchingProducts ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-                <Text style={styles.loadingText}>পণ্য লোড হচ্ছে...</Text>
-              </View>
-            ) : products.length === 0 ? (
-              <Text style={[styles.noDataText, {color: 'red'}]}>
-                কোনো পণ্য পাওয়া যায়নি
-              </Text>
-            ) : (
-              <ScrollView style={styles.productList}>
-                {products
-                  .filter(product =>
-                    product.name
-                      .toLowerCase()
-                      .includes(productSearchQuery.toLowerCase()),
-                  )
-                  .map(product => {
-                    const isSelected =
-                      selectedSaleItemId &&
-                      saleItems.find(item => item.id === selectedSaleItemId)
-                        ?.productId === product.id;
-                    return (
-                      <View key={product.id} style={styles.productItem}>
-                        <Pressable
-                          style={styles.checkboxContainer}
-                          onPress={() => {
-                            if (selectedSaleItemId) {
-                              updateSaleItem(
-                                selectedSaleItemId,
-                                'productId',
-                                product.id,
-                              );
-                              setProductModalVisible(false);
-                              setProductSearchQuery('');
-                              setSelectedSaleItemId(null);
-                            }
-                          }}>
-                          <Ionicons
-                            name={
-                              isSelected ? 'checkbox' : 'checkbox-outline'
-                            }
-                            size={20}
-                            color={COLORS.PRIMARY}
-                          />
-                        </Pressable>
-                        <Pressable
-                          style={styles.productTextContainer}
-                          onPress={() => {
-                            if (selectedSaleItemId) {
-                              updateSaleItem(
-                                selectedSaleItemId,
-                                'productId',
-                                product.id,
-                              );
-                              setProductModalVisible(false);
-                              setProductSearchQuery('');
-                              setSelectedSaleItemId(null);
-                            }
-                          }}>
-                          <Text style={styles.productItemText}>
-                            {`${product.name} - Stock: ${product.stockQty} - Price: ${product.sellingRate}`}
-                          </Text>
-                        </Pressable>
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>পেমেন্ট তথ্য</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>মোট মূল্য</Text>
+                    <Text style={styles.detailValue}>
+                      ৳ {selectedSaleDetails.sellAmount || 0}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>পেইড</Text>
+                    <Text style={[styles.detailValue, {color: '#1B792E'}]}>
+                      ৳ {selectedSaleDetails.paid || 0}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>বাকি</Text>
+                    <Text
+                      style={[
+                        styles.detailValue,
+                        {
+                          color:
+                            (selectedSaleDetails.pendingAmount || 0) > 0
+                              ? '#E43A3A'
+                              : '#1B792E',
+                        },
+                      ]}>
+                      ৳ {selectedSaleDetails.pendingAmount || 0}
+                    </Text>
+                  </View>
+                </View>
+
+                {selectedSaleDetails.sellDetails?.length > 0 && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>পণ্য তালিকা</Text>
+                    <View style={styles.productTableHeader}>
+                      <Text style={[styles.productTableCell, {flex: 3}]}>
+                        পণ্য
+                      </Text>
+                      <Text
+                        style={[
+                          styles.productTableCell,
+                          {flex: 1, textAlign: 'center'},
+                        ]}>
+                        পরিমাণ
+                      </Text>
+                      <Text
+                        style={[
+                          styles.productTableCell,
+                          {flex: 2, textAlign: 'right'},
+                        ]}>
+                        মূল্য
+                      </Text>
+                    </View>
+                    {selectedSaleDetails.sellDetails.map((detail, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.productTableRow,
+                          idx % 2 === 0 && {backgroundColor: '#F8F9FF'},
+                        ]}>
+                        <Text style={[styles.productTableValue, {flex: 3}]}>
+                          {detail.product?.name || '-'}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.productTableValue,
+                            {flex: 1, textAlign: 'center'},
+                          ]}>
+                          {detail.quantity}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.productTableValue,
+                            {flex: 2, textAlign: 'right'},
+                          ]}>
+                          ৳ {detail.total}
+                        </Text>
                       </View>
-                    );
-                  })}
-              </ScrollView>
-            )}
+                    ))}
+                  </View>
+                )}
 
-            <View style={styles.buttonContainer}>
-              <Pressable
-                style={[styles.button, {backgroundColor: 'gray'}]}
-                onPress={() => {
-                  setProductModalVisible(false);
-                  setProductSearchQuery('');
-                  setSelectedSaleItemId(null);
-                }}
-                disabled={isSubmitting}>
-                <Text style={styles.buttonText}>বাতিল</Text>
-              </Pressable>
-            </View>
+                <TouchableOpacity
+                  style={[
+                    styles.cancelBtnFull,
+                    {marginTop: 8, marginBottom: 16},
+                  ]}
+                  onPress={() => setViewModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>বন্ধ করুন</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            ) : (
+              <NoDataFound title="বিবরণ" icon="receipt-outline" />
+            )}
           </View>
         </View>
       </Modal>
@@ -1017,7 +1147,7 @@ export default function SellScreen() {
         visible={deleteModalVisible}
         onClose={() => setDeleteModalVisible(false)}
         onConfirm={confirmDelete}
-        message="আপনি এই বিক্রয়টি মুছে ফেলতে চান?"
+        message="আপনি এই বিক্রয়টি মুছে ফেলতে চান?"
       />
 
       <DeleteModal
@@ -1029,383 +1159,565 @@ export default function SellScreen() {
         onConfirm={deleteSeller}
         message="আপনি এই বিক্রেতাটি মুছে ফেলতে চান?"
       />
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={viewModalVisible}
-        onRequestClose={() => setViewModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeaderContainer}>
-              <Text style={styles.modalTitle}>বিক্রয় বিবরণ</Text>
-            </View>
-
-            {isViewLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-                <Text style={styles.loadingText}>লোড হচ্ছে...</Text>
-              </View>
-            ) : selectedSaleDetails ? (
-              <View style={styles.detailsContainer}>
-                <Text style={styles.detailText}>
-                  ক্রেতা: {selectedSaleDetails.customerName || '-'}
-                </Text>
-                <Text style={styles.detailText}>
-                  ফোন: {selectedSaleDetails.customerPhone || '-'}
-                </Text>
-                <Text style={styles.detailText}>
-                  মোট মূল্য: {selectedSaleDetails.sellAmount || 0}
-                </Text>
-                <Text style={styles.detailText}>
-                  পেইড: {selectedSaleDetails.paid || 0}
-                </Text>
-                <Text style={styles.detailText}>
-                  বাকি: {selectedSaleDetails.pendingAmount || 0}
-                </Text>
-                <Text style={styles.detailText}>
-                  তারিখ: {selectedSaleDetails.createdTime || '-'}
-                </Text>
-
-                <Text style={styles.detailTitle}>পণ্য তালিকা:</Text>
-                <Table borderStyle={{borderWidth: 1, borderColor: '#ccc'}}>
-                  <Row
-                    data={['পণ্য', 'পরিমাণ', 'মূল্য']}
-                    style={styles.slimModalHead}
-                    textStyle={styles.slimHeadText}
-                  />
-                  <Rows
-                    data={
-                      selectedSaleDetails.sellDetails?.map(detail => [
-                        detail.product?.name,
-                        detail.quantity,
-                        detail.total,
-                      ]) || []
-                    }
-                    textStyle={styles.text}
-                  />
-                </Table>
-              </View>
-            ) : (
-              <Text style={styles.noDataText}>কোনো তথ্য পাওয়া যায়নি</Text>
-            )}
-
-            <View style={styles.buttonContainer}>
-              <Pressable
-                style={[styles.button, {backgroundColor: 'gray'}]}
-                onPress={() => setViewModalVisible(false)}>
-                <Text style={styles.buttonText}>বন্ধ করুন</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  page: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#F6F7FF',
   },
-  modalContainer: {
-    width: '90%',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+  countRow: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
-  modalHeaderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  modalTitle: {
-    fontSize: 20,
+  countText: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
+    color: '#6F759B',
   },
-  tabContainer: {
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  // Sale list cards
+  saleCard: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#B3B7D5',
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 3,
   },
-  tabButton: {
+  saleCardLeft: {
     flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: '#ccc',
   },
-  activeTab: {
-    borderBottomColor: COLORS.PRIMARY,
-  },
-  tabText: {
+  saleCustomer: {
     fontSize: 16,
-    color: '#666',
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 4,
   },
-  activeTabText: {
-    color: COLORS.PRIMARY,
-    fontWeight: 'bold',
-  },
-  slimModalHead: {
-    height: 30,
-    backgroundColor: COLORS.TABLE_HEAD,
-  },
-  slimHeadText: {
-    margin: 2,
-    textAlign: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  slimRow: {
-    height: 50,
-  },
-  slimInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 2,
-    margin: 2,
-    borderRadius: 4,
-    textAlign: 'center',
+  saleDate: {
     fontSize: 12,
-    height: 40,
+    color: '#8A92B8',
+    marginBottom: 8,
   },
-  slimPickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    overflow: 'hidden',
-    margin: 2,
-  },
-  slimUnitPicker: {
-    height: 50,
-    width: '100%',
-  },
-  sellerPickerContainer: {
+  salePaidPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    backgroundColor: '#EDF7F1',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
   },
-  addSellerButton: {
-    marginLeft: 10,
-    padding: 5,
+  salePaidLabel: {
+    fontSize: 11,
+    color: '#8A92B8',
+    marginRight: 4,
+  },
+  salePaidValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1B792E',
+  },
+  saleCardActions: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  viewBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#EEF0FF',
+    alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 8,
+  },
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#FCE8E8',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  editContainer: {
-    flexDirection: 'row',
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#EEF0FF',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    marginRight: 8,
   },
-  actionButton: {
-    padding: 5,
-  },
-  addNewButton: {
-    backgroundColor: COLORS.PRIMARY || '#28A745',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  addNewText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-  },
-  addNewButtonContainer: {
-    width: '100%',
-    flexDirection: 'row',
+  // Bottom sheet
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
-    marginBottom: 20,
   },
-  button: {
-    flex: 1,
-    paddingVertical: 8,
-    marginHorizontal: 5,
-    borderRadius: 8,
-    alignItems: 'center',
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    maxHeight: '95%',
   },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  head: {
-    height: 40,
-    backgroundColor: COLORS.PRIMARY,
-  },
-  headText: {
-    margin: 4,
-    textAlign: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  text: {
-    margin: 6,
-    textAlign: 'center',
-    color: 'black',
-  },
-  noDataText: {
-    fontSize: 18,
-    color: '#34495e',
-    fontWeight: 'bold',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 200,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: COLORS.PRIMARY,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  totalCount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.PRIMARY,
-  },
-  reloadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 5,
-    backgroundColor: '#f0f0f0',
-  },
-  reloadText: {
-    marginLeft: 5,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  trashCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 0,
+  sheetHandle: {
     width: 40,
+    height: 4,
+    backgroundColor: '#E0E3F0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
   },
-  actionCell: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 0,
-    width: 60,
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 18,
   },
-  actionIcon: {
-    marginHorizontal: 5,
+  // Form sections
+  formSection: {
+    marginBottom: 22,
   },
-  inputContainer: {
-    marginTop: 20,
-    marginBottom: 20,
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#23283A',
+    marginBottom: 12,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 4,
+  smallLabel: {
     fontSize: 14,
+    color: '#34384A',
+    marginBottom: 8,
   },
-  readonlyInput: {
-    backgroundColor: '#f0f0f0',
-    color: '#666',
-  },
-  checkboxContainer: {
+  // Seller input row
+  sellerInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 10
   },
-  checkbox: {
+  sellerInputBox: {
+    flex: 1,
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: '#E7E3EC',
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 10,
   },
-  checkboxLabel: {
+  sellerPickerWrap: {
+    flex: 1,
+  },
+  sellerPicker: {
+    color: '#23283A',
     marginLeft: 8,
+  },
+  addSellerIconBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#EEF0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Product selection card
+  selectionCard: {
+    borderRadius: 18,
+    backgroundColor: '#F2EEF7',
+    padding: 14,
+  },
+  productSearchBox: {
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  productSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 15,
+    color: '#23283A',
+  },
+  emptyStateText: {
     fontSize: 14,
-    color: '#333',
+    color: '#75798B',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
+  productRow: {
+    minHeight: 58,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
     marginBottom: 10,
-    textAlign: 'left',
-  },
-  detailsContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 8,
-  },
-  detailTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  productPickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    margin: 2,
-    borderRadius: 4,
-    backgroundColor: '#fff',
   },
-  productPickerText: {
-    fontSize: 12,
-    color: '#333',
-    flex: 1,
+  productRowActive: {
+    borderWidth: 1.5,
+    borderColor: '#C9CEFF',
   },
-  productList: {
-    maxHeight: 300,
-    marginBottom: 20,
-  },
-  productItem: {
+  productLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    flex: 1,
+    marginRight: 10,
   },
-  productTextContainer: {
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#B9B8C8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxActive: {
+    backgroundColor: '#1B238B',
+    borderColor: '#1B238B',
+  },
+  productName: {
+    fontSize: 15,
+    color: '#23283A',
+    marginLeft: 10,
+  },
+  productPrice: {
+    fontSize: 13,
+    color: '#6D7286',
+  },
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+    marginTop: -4,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#EDE9F4',
+  },
+  qtyIcon: {
+    marginRight: 8,
+  },
+  qtyInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#23283A',
+  },
+  qtyUnit: {
+    fontSize: 13,
+    color: '#8A92B8',
+    marginLeft: 8,
+  },
+  // Payment type
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  paymentButton: {
+    width: '47%',
+    height: 68,
+    borderRadius: 16,
+    backgroundColor: '#E7E3EC',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentButtonActive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#101A79',
+  },
+  paymentText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4B4E60',
+    marginLeft: 8,
+  },
+  paymentTextActive: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#101A79',
+    marginLeft: 8,
+  },
+  // Summary banner
+  summaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    backgroundColor: '#EEF1FF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#51608C',
+    marginRight: 6,
+  },
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#101A79',
+    marginRight: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0ECF5',
+    marginBottom: 20,
+  },
+  // Buyer info section
+  infoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoTitle: {
+    marginLeft: 8,
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#101A79',
+  },
+  textInput: {
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: '#E7E3EC',
+    paddingHorizontal: 18,
+    color: '#23283A',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  textInputDisabled: {
+    opacity: 0.5,
+  },
+  // Submit button
+  submitButton: {
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: '#191E8D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#191E8D',
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    shadowOffset: {width: 0, height: 8},
+    elevation: 6,
+    marginBottom: 4,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  submitText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  // Action buttons
+  sheetActions: {
+    flexDirection: 'row',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#F5F7FF',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cancelBtnFull: {
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#F5F7FF',
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6F759B',
+  },
+  saveBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#1D2A74',
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  errorText: {
+    color: '#E43A3A',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  // Loading / empty inside modal
+  centeredLoader: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  loaderText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6F759B',
+  },
+  emptyNotice: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  emptyNoticeText: {
+    fontSize: 14,
+    color: '#E43A3A',
+    textAlign: 'center',
+    marginVertical: 12,
+    lineHeight: 22,
+  },
+  // Seller management modal
+  tabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0FB',
+    borderRadius: 24,
+    padding: 6,
+    marginBottom: 16,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  tabBtnActive: {
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
+  },
+  tabText: {
+    fontSize: 14,
+    color: '#8A92B8',
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#1D2A74',
+    fontWeight: '700',
+  },
+  sellerList: {
+    maxHeight: 280,
+  },
+  sellerRow: {
+    backgroundColor: '#F8F9FF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  sellerViewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sellerEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sellerName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1D2A74',
     flex: 1,
   },
-  productItemText: {
+  sellerBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  // View details
+  detailSection: {
+    backgroundColor: '#F8F9FF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+  },
+  detailSectionTitle: {
     fontSize: 14,
-    color: '#333',
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0FF',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6F759B',
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1D2A74',
+  },
+  productTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#EEF0FF',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  productTableCell: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1D2A74',
+  },
+  productTableRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 6,
+    marginBottom: 2,
+  },
+  productTableValue: {
+    fontSize: 13,
+    color: '#22263F',
   },
 });

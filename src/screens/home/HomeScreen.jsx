@@ -8,13 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
 import {SafeAreaView} from 'react-native-safe-area-context';
-
 import React from 'react';
-import Toast from 'react-native-toast-message';
 import menuItems from '../../data/menuItems';
-import {useNavigation} from '@react-navigation/native';
+import QuickActionCard from '../../components/home/QuickActionCard';
 
 export default function HomeScreen({navigation}) {
   return (
@@ -76,33 +73,6 @@ export default function HomeScreen({navigation}) {
   );
 }
 
-const QuickActionCard = ({item}) => {
-  const navigation = useNavigation();
-
-  return (
-    <TouchableOpacity
-      style={styles.quickActionCard}
-      activeOpacity={0.7}
-      onPress={() => {
-        if (!item.screen) {
-          Toast.show({
-            type: 'error',
-            position: 'bottom',
-            text1: '🚧 This feature is under development',
-            visibilityTime: 2000,
-          });
-        } else {
-          navigation.navigate(item.screen);
-        }
-      }}>
-      <View style={[styles.actionIcon, {backgroundColor: item.color + '20'}]}>
-        <Icon name={item.icon} type={item.type} size={22} color={item.color} />
-      </View>
-      <Text style={styles.actionLabel}>{item.title}</Text>
-    </TouchableOpacity>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -160,34 +130,6 @@ const styles = StyleSheet.create({
     gap: 10,
     justifyContent: 'space-between',
     marginBottom: 18,
-  },
-  quickActionCard: {
-    width: '48%',
-    minHeight: 104,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 12,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 3,
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  actionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#17173C',
   },
   promoCard: {
     flexDirection: 'row',

@@ -11,15 +11,15 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 
-import DeleteModal from '../../../components/DeleteModal';
+import DeleteModal from '../../components/modals/DeleteModal';
 import {FAB} from '@rneui/themed';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LoadingContainer from '../../../components/LoadingContainer';
+import LoadingContainer from '../../components/common/LoadingContainer';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import NoDataFound from '../../../components/NoDataFound';
+import NoDataFound from '../../components/common/NoDataFound';
 import {Picker} from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
-import api from '../../../api';
+import api from '../../api';
 
 export default function SellScreen() {
   const [modalVisible, setModalVisible] = useState(false);

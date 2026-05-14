@@ -1,14 +1,14 @@
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
-import AccountScreen from '../screens/app_screens/home_tabs/AccountScreen';
-import HomeScreen from '../screens/app_screens/HomeScreen';
+import AccountScreen from '../screens/tabs/AccountScreen';
+import HomeScreen from '../screens/home/HomeScreen';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import OfferScreen from '../screens/app_screens/home_tabs/OfferScreen';
-import PedalScreen from '../screens/app_screens/home_tabs/PedalScreen';
+import OfferScreen from '../screens/tabs/OfferScreen';
+import PedalScreen from '../screens/tabs/PedalScreen';
 import React from 'react';
-import SettingScreen from '../screens/app_screens/home_tabs/SettingScreen';
+import SettingScreen from '../screens/tabs/SettingScreen';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
 const Tab = createBottomTabNavigator();

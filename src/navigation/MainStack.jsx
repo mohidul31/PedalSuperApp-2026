@@ -1,11 +1,11 @@
 import {Text, View} from 'react-native';
 
-import BudgetPlannerLandingScreen from '../screens/app_screens/budget_planner/BudgetPlannerLandingScreen';
+import BudgetPlannerLandingScreen from '../screens/budget/BudgetPlannerLandingScreen';
 import CustomDrawer from './CustomDrawer';
 import HomeTabs from './HomeTabs';
 import React from 'react';
-import SmeManagerLandingScreen from '../screens/app_screens/sme_manager/SmeManagerLandingScreen';
-import UnderConstruction from '../components/UnderConstruction';
+import SmeManagerLandingScreen from '../screens/sme/SmeManagerLandingScreen';
+import UnderConstruction from '../components/common/UnderConstruction';
 import {createDrawerNavigator} from '@react-navigation/drawer';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 

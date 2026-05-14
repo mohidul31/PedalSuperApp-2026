@@ -9,120 +9,120 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 
-import BudgetModal from '../../../components/BudgetModal';
-import DeleteModal from '../../../components/DeleteModal';
+import DeleteModal from '../../components/modals/DeleteModal';
+import IncomeModal from '../../components/modals/IncomeModal';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LoadingContainer from '../../../components/LoadingContainer';
-import NoDataFound from '../../../components/NoDataFound';
+import LoadingContainer from '../../components/common/LoadingContainer';
+import NoDataFound from '../../components/common/NoDataFound';
 import Toast from 'react-native-toast-message';
-import api from '../../../api';
+import api from '../../api';
 
-const MyBudgetScreen = () => {
+const IncomePlanScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [budgetToDelete, setBudgetToDelete] = useState(null);
-  const [budgetToEditId, setBudgetToEditId] = useState(null);
-  const [budgetName, setBudgetName] = useState('');
+  const [incomeToDelete, setIncomeToDelete] = useState(null);
+  const [incomeToEditId, setIncomeToEditId] = useState(null);
+  const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
-  const [budgetItems, setBudgetItems] = useState([
+  const [incomeItems, setIncomeItems] = useState([
     {id: 1, name: '', planned: '', actual: ''},
   ]);
-  const [budgets, setBudgets] = useState([]);
+  const [incomes, setIncomes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchBudgets();
+    fetchIncomes();
   }, []);
 
   const showToast = (message, type = 'success') => {
     Toast.show({type, text1: message, position: 'bottom'});
   };
 
-  const fetchBudgets = async () => {
+  const fetchIncomes = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/budget');
-      setBudgets(response.data.data);
+      const response = await api.get('/api/IncomePlan');
+      setIncomes(response.data.data);
     } catch (error) {
-      setBudgets([]);
-      showToast('বাজেট লোড করতে ব্যর্থ', 'error');
+      setIncomes([]);
+      showToast('আয় লোড করতে ব্যর্থ', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteBudget = async () => {
-    if (!budgetToDelete) return;
+  const handleDeleteIncome = async () => {
+    if (!incomeToDelete) return;
     try {
       setLoading(true);
-      await api.delete(`/api/budget/${budgetToDelete}`);
-      setBudgets(budgets.filter(budget => budget.id !== budgetToDelete));
-      showToast('বাজেট সফলভাবে মুছে ফেলা হয়েছে', 'success');
+      await api.delete(`/api/IncomePlan/${incomeToDelete}`);
+      setIncomes(incomes.filter(income => income.id !== incomeToDelete));
+      showToast('আয় সফলভাবে মুছে ফেলা হয়েছে', 'success');
     } catch (error) {
-      showToast('বাজেট মুছতে ব্যর্থ', 'error');
+      showToast('আয় মুছতে ব্যর্থ', 'error');
     } finally {
       setLoading(false);
       setDeleteModalVisible(false);
-      setBudgetToDelete(null);
+      setIncomeToDelete(null);
     }
   };
 
-  const calculateBudgetTotals = budget => {
-    const incomeAmount = budget.budgetDetails
+  const calculateIncomeTotals = income => {
+    const incomeAmount = income.incomePlanDetails
       ?.reduce((sum, item) => sum + Number(item.plannedAmount || 0), 0)
       .toString();
-    const expenseAmount = budget.budgetDetails
+    const expenseAmount = income.incomePlanDetails
       ?.reduce((sum, item) => sum + Number(item.actualAmount || 0), 0)
       .toString();
     return {incomeAmount, expenseAmount};
   };
 
-  const getBudgetStatus = budget => {
+  const getIncomeStatus = income => {
     const now = new Date();
     const parseDate = dateStr => {
       const [day, month, year] = dateStr.split('/').map(Number);
       return new Date(year, month - 1, day);
     };
-    const start = parseDate(budget.planStartDate);
-    const end = parseDate(budget.planEndDate);
+    const start = parseDate(income.planStartDate);
+    const end = parseDate(income.planEndDate);
     if (now < start) return 'প্রস্তুতি';
     if (now > end) return 'সম্পন্ন';
     return 'চলমান';
   };
 
-  const addBudgetItem = () => {
-    setBudgetItems([
-      ...budgetItems,
+  const addIncomeItem = () => {
+    setIncomeItems([
+      ...incomeItems,
       {id: Date.now(), name: '', planned: '', actual: ''},
     ]);
   };
 
-  const removeBudgetItem = id => {
-    setBudgetItems(budgetItems.filter(item => item.id !== id));
+  const removeIncomeItem = id => {
+    setIncomeItems(incomeItems.filter(item => item.id !== id));
   };
 
-  const updateBudgetItem = (id, key, value) => {
-    setBudgetItems(
-      budgetItems.map(item =>
+  const updateIncomeItem = (id, key, value) => {
+    setIncomeItems(
+      incomeItems.map(item =>
         item.id === id ? {...item, [key]: value} : item,
       ),
     );
   };
 
-  const handleEditBudget = budgetId => {
-    setBudgetToEditId(budgetId);
+  const handleEditIncome = incomePlanId => {
+    setIncomeToEditId(incomePlanId);
     setEditModalVisible(true);
   };
 
   const handleEditModalClose = () => {
     setEditModalVisible(false);
-    setBudgetToEditId(null);
-    setBudgetName('');
+    setIncomeToEditId(null);
+    setName('');
     setStartDate(null);
     setEndDate(null);
-    setBudgetItems([{id: 1, name: '', planned: '', actual: ''}]);
+    setIncomeItems([{id: 1, name: '', planned: '', actual: ''}]);
   };
 
   return (
@@ -132,35 +132,35 @@ const MyBudgetScreen = () => {
         refreshControl={
           <RefreshControl
             refreshing={loading}
-            onRefresh={fetchBudgets}
+            onRefresh={fetchIncomes}
             colors={['#1D2A74']}
           />
         }>
         <View style={styles.container}>
           <Text style={styles.sectionLabel}>সারাংশ</Text>
-          <Text style={styles.pageTitle}>আপনার সকল বাজেট</Text>
+          <Text style={styles.pageTitle}>আপনার আয় পরিকল্পনা</Text>
 
           {loading ? (
-            <LoadingContainer title="বাজেট লোড হচ্ছে" />
-          ) : budgets.length > 0 ? (
-            budgets.map(budget => {
+            <LoadingContainer title="আয় লোড হচ্ছে" />
+          ) : incomes.length > 0 ? (
+            incomes.map(income => {
               const {incomeAmount, expenseAmount} =
-                calculateBudgetTotals(budget);
+                calculateIncomeTotals(income);
               const planned = parseFloat(incomeAmount) || 0;
               const actual = parseFloat(expenseAmount) || 0;
               const progress =
                 planned > 0
                   ? Math.min((actual / planned) * 100, 100)
                   : 0;
-              const status = getBudgetStatus(budget);
+              const status = getIncomeStatus(income);
 
               return (
-                <View key={budget.id} style={styles.card}>
+                <View key={income.id} style={styles.card}>
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.cardHeaderLeft}>
-                      <Text style={styles.cardTitle}>{budget.budgetName}</Text>
+                      <Text style={styles.cardTitle}>{income.name}</Text>
                       <Text style={styles.cardSubtitle}>
-                        {budget.planStartDate} - {budget.planEndDate}
+                        {income.planStartDate} - {income.planEndDate}
                       </Text>
                     </View>
                     <View
@@ -204,7 +204,7 @@ const MyBudgetScreen = () => {
                       </View>
                       <View style={styles.progressInfoRow}>
                         <Text style={styles.progressInfo}>
-                          ব্যয় {Math.round(progress)}%
+                          সংগ্রহিত {Math.round(progress)}%
                         </Text>
                         <Text style={styles.progressInfo}>
                           বাকি ৳ {Math.max(planned - actual, 0)}
@@ -217,7 +217,7 @@ const MyBudgetScreen = () => {
                     <TouchableOpacity
                       style={styles.deleteButton}
                       onPress={() => {
-                        setBudgetToDelete(budget.id);
+                        setIncomeToDelete(income.id);
                         setDeleteModalVisible(true);
                       }}>
                       <Ionicons
@@ -229,7 +229,7 @@ const MyBudgetScreen = () => {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.detailButton}
-                      onPress={() => handleEditBudget(budget.id)}>
+                      onPress={() => handleEditIncome(income.id)}>
                       <Text style={styles.detailButtonText}>
                         বিস্তারিত দেখুন →
                       </Text>
@@ -239,14 +239,14 @@ const MyBudgetScreen = () => {
               );
             })
           ) : (
-            <NoDataFound title="বাজেট" />
+            <NoDataFound title="আয়" />
           )}
         </View>
       </ScrollView>
 
       <FAB
         visible={true}
-        title="নতুন বাজেট"
+        title="নতুন আয়"
         icon={{name: 'add', color: 'white'}}
         color="#1D2A74"
         placement="right"
@@ -258,47 +258,47 @@ const MyBudgetScreen = () => {
         visible={deleteModalVisible}
         onClose={() => {
           setDeleteModalVisible(false);
-          setBudgetToDelete(null);
+          setIncomeToDelete(null);
         }}
-        onConfirm={handleDeleteBudget}
-        message="আপনি এই বাজেটটি মুছে ফেলতে চান?"
+        onConfirm={handleDeleteIncome}
+        message="আপনি এই আয়টি মুছে ফেলতে চান?"
       />
 
-      <BudgetModal
+      <IncomeModal
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
-        budgetName={budgetName}
-        setBudgetName={setBudgetName}
+        name={name}
+        setName={setName}
         startDate={startDate}
         setStartDate={setStartDate}
         endDate={endDate}
         setEndDate={setEndDate}
-        budgetItems={budgetItems}
-        setBudgetItems={setBudgetItems}
-        addBudgetItem={addBudgetItem}
-        updateBudgetItem={updateBudgetItem}
-        removeBudgetItem={removeBudgetItem}
+        incomeItems={incomeItems}
+        setIncomeItems={setIncomeItems}
+        addIncomeItem={addIncomeItem}
+        updateIncomeItem={updateIncomeItem}
+        removeIncomeItem={removeIncomeItem}
         isEditMode={false}
-        fetchBudgets={fetchBudgets}
+        fetchIncomes={fetchIncomes}
       />
 
-      <BudgetModal
+      <IncomeModal
         modalVisible={editModalVisible}
         setModalVisible={setEditModalVisible}
-        budgetName={budgetName}
-        setBudgetName={setBudgetName}
+        name={name}
+        setName={setName}
         startDate={startDate}
         setStartDate={setStartDate}
         endDate={endDate}
         setEndDate={setEndDate}
-        budgetItems={budgetItems}
-        setBudgetItems={setBudgetItems}
-        addBudgetItem={addBudgetItem}
-        updateBudgetItem={updateBudgetItem}
-        removeBudgetItem={removeBudgetItem}
+        incomeItems={incomeItems}
+        setIncomeItems={setIncomeItems}
+        addIncomeItem={addIncomeItem}
+        updateIncomeItem={updateIncomeItem}
+        removeIncomeItem={removeIncomeItem}
         isEditMode={true}
-        budgetId={budgetToEditId}
-        fetchBudgets={fetchBudgets}
+        incomePlanId={incomeToEditId}
+        fetchIncomes={fetchIncomes}
         onClose={handleEditModalClose}
       />
     </View>
@@ -457,4 +457,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MyBudgetScreen;
+export default IncomePlanScreen;

@@ -12,15 +12,15 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 
-import DeleteModal from '../../../components/DeleteModal';
+import DeleteModal from '../../components/modals/DeleteModal';
 import {FAB} from '@rneui/themed';
 import {Formik} from 'formik';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LoadingContainer from '../../../components/LoadingContainer';
-import NoDataFound from '../../../components/NoDataFound';
+import LoadingContainer from '../../components/common/LoadingContainer';
+import NoDataFound from '../../components/common/NoDataFound';
 import {Picker} from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
-import api from '../../../api';
+import api from '../../api';
 
 export default function StockManagerScreen() {
   const [modalVisible, setModalVisible] = useState(false);

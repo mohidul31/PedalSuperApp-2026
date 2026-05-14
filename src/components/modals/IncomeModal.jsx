@@ -13,25 +13,25 @@ import React, {useEffect, useState} from 'react';
 import DatePicker from 'react-native-date-picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
-import api from '../api';
+import api from '../../api';
 
-export default function BudgetModal({
+export default function IncomeModal({
   modalVisible,
   setModalVisible,
-  budgetName,
-  setBudgetName,
+  name,
+  setName,
   startDate,
   setStartDate,
   endDate,
   setEndDate,
-  budgetItems,
-  setBudgetItems,
-  addBudgetItem,
-  updateBudgetItem,
-  removeBudgetItem,
+  incomeItems,
+  setIncomeItems,
+  addIncomeItem,
+  updateIncomeItem,
+  removeIncomeItem,
   isEditMode = false,
-  budgetId,
-  fetchBudgets,
+  incomePlanId,
+  fetchIncomes,
   onClose,
 }) {
   const [openStartPicker, setOpenStartPicker] = useState(false);
@@ -40,15 +40,15 @@ export default function BudgetModal({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [subModalVisible, setSubModalVisible] = useState(false);
-  const [subBudgetItems, setSubBudgetItems] = useState([]);
+  const [subIncomeItems, setSubIncomeItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const [subErrorMessage, setSubErrorMessage] = useState('');
 
-  const totalPlanned = budgetItems
+  const totalPlanned = incomeItems
     .reduce((sum, item) => sum + (parseFloat(item.planned) || 0), 0)
     .toFixed(0);
 
-  const totalActual = budgetItems
+  const totalActual = incomeItems
     .reduce((sum, item) => sum + (parseFloat(item.actual) || 0), 0)
     .toFixed(0);
 
@@ -57,25 +57,25 @@ export default function BudgetModal({
   };
 
   useEffect(() => {
-    if (isEditMode && budgetId && modalVisible) {
-      fetchBudgetData();
+    if (isEditMode && incomePlanId && modalVisible) {
+      fetchIncomeData();
     }
-  }, [isEditMode, budgetId, modalVisible]);
+  }, [isEditMode, incomePlanId, modalVisible]);
 
-  const fetchBudgetData = async () => {
+  const fetchIncomeData = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get(`/api/budget/${budgetId}`);
-      const budget = response.data.data;
-      setBudgetName(budget.budgetName);
+      const response = await api.get(`/api/incomePlan/${incomePlanId}`);
+      const income = response.data.data;
+      setName(income.name);
       const parseDate = dateStr => {
         const [day, month, year] = dateStr.split('/').map(Number);
         return new Date(year, month - 1, day);
       };
-      setStartDate(parseDate(budget.planStartDate));
-      setEndDate(parseDate(budget.planEndDate));
-      setBudgetItems(
-        budget.budgetDetails.map(item => ({
+      setStartDate(parseDate(income.planStartDate));
+      setEndDate(parseDate(income.planEndDate));
+      setIncomeItems(
+        income.incomePlanDetails.map(item => ({
           id: Date.now() + Math.random(),
           name: item.sectorName,
           planned: item.plannedAmount.toString(),
@@ -91,22 +91,22 @@ export default function BudgetModal({
         })),
       );
     } catch (error) {
-      showToast('বাজেট লোড করতে ব্যর্থ', 'error');
+      showToast('আয় লোড করতে ব্যর্থ', 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addSubBudgetItem = () => {
-    setSubBudgetItems(prev => [
+  const addSubIncomeItem = () => {
+    setSubIncomeItems(prev => [
       ...prev,
       {id: Date.now() + Math.random(), name: '', planned: '', actual: ''},
     ]);
     setSubErrorMessage('');
   };
 
-  const updateSubBudgetItem = (id, field, value) => {
-    setSubBudgetItems(prev =>
+  const updateSubIncomeItem = (id, field, value) => {
+    setSubIncomeItems(prev =>
       prev.map(item =>
         item.id === id
           ? {
@@ -121,29 +121,29 @@ export default function BudgetModal({
     );
   };
 
-  const removeSubBudgetItem = id => {
-    setSubBudgetItems(prev => prev.filter(item => item.id !== id));
+  const removeSubIncomeItem = id => {
+    setSubIncomeItems(prev => prev.filter(item => item.id !== id));
   };
 
   const handleAddSubItems = () => {
-    const hasEmptyFields = subBudgetItems.some(
+    const hasEmptyFields = subIncomeItems.some(
       item => !item.name.trim() || !item.planned || !item.actual,
     );
-    if (subBudgetItems.length === 0 || hasEmptyFields) {
+    if (subIncomeItems.length === 0 || hasEmptyFields) {
       setSubErrorMessage(
         'সব সাব-আইটেমের জন্য নাম, পরিকল্পিত এবং প্রকৃত পরিমাণ প্রয়োজন',
       );
       return;
     }
-    setBudgetItems(prev =>
+    setIncomeItems(prev =>
       prev.map(item =>
         item.id === selectedItemId
-          ? {...item, subItems: subBudgetItems}
+          ? {...item, subItems: subIncomeItems}
           : item,
       ),
     );
     setSubModalVisible(false);
-    setSubBudgetItems([]);
+    setSubIncomeItems([]);
     setSubErrorMessage('');
   };
 
@@ -172,10 +172,10 @@ export default function BudgetModal({
   };
 
   const handleSave = async () => {
-    const hasEmptyFields = budgetItems.some(
+    const hasEmptyFields = incomeItems.some(
       item => !item.name.trim() || !item.planned || !item.actual,
     );
-    if (budgetItems.length === 0 || hasEmptyFields) {
+    if (incomeItems.length === 0 || hasEmptyFields) {
       setErrorMessage(
         'সব আইটেমের জন্য নাম, পরিকল্পিত এবং প্রকৃত পরিমাণ প্রয়োজন',
       );
@@ -183,35 +183,38 @@ export default function BudgetModal({
     }
     setIsSaving(true);
     try {
-      if (isEditMode && budgetId) {
+      if (isEditMode && incomePlanId) {
         const payload = {
-          id: budgetId,
-          budgetName,
+          id: incomePlanId,
+          name,
           planStartDate: formatDate(startDate),
           planEndDate: formatDate(endDate),
-          budgetDetails: budgetItems.map(item => ({
-            budgetId,
+          incomePlanDetails: incomeItems.map(item => ({
+            incomePlanId,
             sectorName: item.name,
             plannedAmount: item.planned,
             actualAmount: item.actual,
             sectorDetails: (item.subItems || []).map(subItem => ({
-              budgetId,
+              incomePlanId,
               name: subItem.name,
               plannedAmount: subItem.planned,
               actualAmount: subItem.actual,
             })),
           })),
         };
-        const response = await api.put(`/api/budget/${budgetId}`, payload);
+        const response = await api.put(
+          `/api/incomePlan/${incomePlanId}`,
+          payload,
+        );
         if (response.data.success) {
-          showToast('বাজেট সফলভাবে আপডেট করা হয়েছে');
+          showToast('আয় সফলভাবে আপডেট করা হয়েছে');
         }
       } else {
         const payload = {
-          budgetName,
+          name,
           planStartDate: formatDate(startDate),
           planEndDate: formatDate(endDate),
-          budgetDetails: budgetItems.map(item => ({
+          incomePlanDetails: incomeItems.map(item => ({
             sectorName: item.name,
             plannedAmount: item.planned,
             actualAmount: item.actual,
@@ -222,23 +225,23 @@ export default function BudgetModal({
             })),
           })),
         };
-        const response = await api.post('/api/budget', payload);
+        const response = await api.post('/api/incomePlan', payload);
         if (response.data.success) {
-          showToast('বাজেট যোগ করা হয়েছে');
+          showToast('আয় যোগ করা হয়েছে');
         }
       }
       setModalVisible(false);
-      fetchBudgets();
+      fetchIncomes();
       if (!isEditMode) {
-        setBudgetName('');
+        setName('');
         setStartDate(null);
         setEndDate(null);
-        setBudgetItems([{id: 1, name: '', planned: '', actual: '', subItems: []}]);
+        setIncomeItems([{id: 1, name: '', planned: '', actual: '', subItems: []}]);
       }
       setErrorMessage('');
     } catch (error) {
       setErrorMessage(
-        'বাজেট সংরক্ষণে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।',
+        'আয় সংরক্ষণে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।',
       );
     } finally {
       setIsSaving(false);
@@ -265,15 +268,13 @@ export default function BudgetModal({
             {isLoading && isEditMode ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1D2A74" />
-                <Text style={styles.loadingText}>বাজেট লোড হচ্ছে...</Text>
+                <Text style={styles.loadingText}>আয় লোড হচ্ছে...</Text>
               </View>
             ) : (
               <>
                 <View style={styles.sheetHeader}>
                   <Text style={styles.sheetTitle}>
-                    {isEditMode
-                      ? 'বাজেট সম্পাদনা করুন'
-                      : 'নতুন বাজেট তৈরি করুন'}
+                    {isEditMode ? 'আয় সম্পাদনা করুন' : 'নতুন আয় তৈরি করুন'}
                   </Text>
                   <TouchableOpacity
                     onPress={handleClose}
@@ -286,13 +287,13 @@ export default function BudgetModal({
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.sheetContent}>
                   <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>বাজেটের নাম লিখুন</Text>
+                    <Text style={styles.fieldLabel}>আয়ের নাম লিখুন</Text>
                     <View style={styles.inputBox}>
                       <TextInput
-                        placeholder="উদা: জুন মাসের বাজেট"
+                        placeholder="উদা: জুন মাসের আয়"
                         placeholderTextColor="#8F96B0"
-                        value={budgetName}
-                        onChangeText={setBudgetName}
+                        value={name}
+                        onChangeText={setName}
                         style={styles.textInput}
                       />
                     </View>
@@ -364,11 +365,11 @@ export default function BudgetModal({
                   />
 
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>ব্যয়ের বিবরণ</Text>
+                    <Text style={styles.sectionTitle}>আয়ের বিবরণ</Text>
                     <TouchableOpacity
                       style={styles.addButton}
                       onPress={() => {
-                        addBudgetItem();
+                        addIncomeItem();
                         setErrorMessage('');
                       }}>
                       <Ionicons name="add" size={18} color="#FFFFFF" />
@@ -379,14 +380,14 @@ export default function BudgetModal({
                   <View style={styles.tableCard}>
                     <View style={styles.tableHeader}>
                       <Text style={[styles.tableHeaderText, {flex: 2}]}>
-                        বিষয়ের নাম
+                        সোর্স
                       </Text>
                       <Text style={styles.tableHeaderText}>পরিকল্পিত</Text>
-                      <Text style={styles.tableHeaderText}>প্রকৃত</Text>
+                      <Text style={styles.tableHeaderText}>প্রাপ্ত</Text>
                       <View style={{width: 68}} />
                     </View>
                     <ScrollView style={{maxHeight: 240}} nestedScrollEnabled>
-                      {budgetItems.map(item => (
+                      {incomeItems.map(item => (
                         <View key={item.id} style={styles.tableRow}>
                           <TextInput
                             style={[styles.cellInput, {flex: 2}]}
@@ -394,7 +395,7 @@ export default function BudgetModal({
                             placeholderTextColor="#BBC0D3"
                             value={item.name}
                             onChangeText={text =>
-                              updateBudgetItem(item.id, 'name', text)
+                              updateIncomeItem(item.id, 'name', text)
                             }
                           />
                           <TextInput
@@ -404,7 +405,7 @@ export default function BudgetModal({
                             keyboardType="numeric"
                             value={item.planned}
                             onChangeText={text =>
-                              updateBudgetItem(item.id, 'planned', text)
+                              updateIncomeItem(item.id, 'planned', text)
                             }
                           />
                           <TextInput
@@ -414,7 +415,7 @@ export default function BudgetModal({
                             keyboardType="numeric"
                             value={item.actual}
                             onChangeText={text =>
-                              updateBudgetItem(item.id, 'actual', text)
+                              updateIncomeItem(item.id, 'actual', text)
                             }
                           />
                           <View style={styles.rowActions}>
@@ -422,19 +423,19 @@ export default function BudgetModal({
                               style={styles.rowActionBtn}
                               onPress={() => {
                                 setSelectedItemId(item.id);
-                                setSubBudgetItems(item.subItems || []);
+                                setSubIncomeItems(item.subItems || []);
                                 setSubModalVisible(true);
                                 setSubErrorMessage('');
                               }}>
                               <Ionicons
                                 name="add-circle-outline"
                                 size={17}
-                                color="#1E592D"
+                                color="#1D2A74"
                               />
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={styles.rowActionBtn}
-                              onPress={() => removeBudgetItem(item.id)}>
+                              onPress={() => removeIncomeItem(item.id)}>
                               <Ionicons
                                 name="trash-outline"
                                 size={17}
@@ -460,7 +461,7 @@ export default function BudgetModal({
                     </View>
                     <View style={[styles.summaryBox, styles.summaryBoxGreen]}>
                       <Text style={[styles.summaryLabel, {color: '#1D2A74'}]}>
-                        মোট প্রকৃত
+                        মোট প্রাপ্ত
                       </Text>
                       <Text
                         style={[styles.summaryAmount, {color: '#0E3E1F'}]}>
@@ -528,22 +529,20 @@ export default function BudgetModal({
 
             <TouchableOpacity
               style={styles.modalAddButton}
-              onPress={addSubBudgetItem}>
+              onPress={addSubIncomeItem}>
               <Ionicons name="add" size={18} color="#FFFFFF" />
               <Text style={styles.addButtonText}> বিষয় যোগ করুন</Text>
             </TouchableOpacity>
 
             <View style={styles.tableCard}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, {flex: 2}]}>
-                  বিষয়ের নাম
-                </Text>
+                <Text style={[styles.tableHeaderText, {flex: 2}]}>সোর্স</Text>
                 <Text style={styles.tableHeaderText}>পরিকল্পিত</Text>
-                <Text style={styles.tableHeaderText}>প্রকৃত</Text>
+                <Text style={styles.tableHeaderText}>প্রাপ্ত</Text>
                 <View style={{width: 40}} />
               </View>
               <ScrollView style={{maxHeight: 220}} nestedScrollEnabled>
-                {subBudgetItems.map(item => (
+                {subIncomeItems.map(item => (
                   <View key={item.id} style={styles.tableRow}>
                     <TextInput
                       style={[styles.cellInput, {flex: 2}]}
@@ -551,7 +550,7 @@ export default function BudgetModal({
                       placeholderTextColor="#BBC0D3"
                       value={item.name}
                       onChangeText={text =>
-                        updateSubBudgetItem(item.id, 'name', text)
+                        updateSubIncomeItem(item.id, 'name', text)
                       }
                     />
                     <TextInput
@@ -561,7 +560,7 @@ export default function BudgetModal({
                       keyboardType="numeric"
                       value={item.planned}
                       onChangeText={text =>
-                        updateSubBudgetItem(item.id, 'planned', text)
+                        updateSubIncomeItem(item.id, 'planned', text)
                       }
                     />
                     <TextInput
@@ -571,12 +570,12 @@ export default function BudgetModal({
                       keyboardType="numeric"
                       value={item.actual}
                       onChangeText={text =>
-                        updateSubBudgetItem(item.id, 'actual', text)
+                        updateSubIncomeItem(item.id, 'actual', text)
                       }
                     />
                     <TouchableOpacity
                       style={[styles.rowActionBtn, {width: 40}]}
-                      onPress={() => removeSubBudgetItem(item.id)}>
+                      onPress={() => removeSubIncomeItem(item.id)}>
                       <Ionicons
                         name="trash-outline"
                         size={17}
@@ -599,8 +598,8 @@ export default function BudgetModal({
                 color="#1D2A74"
               />
               <Text style={styles.infoText}>
-                নতুন বিষয় যোগ করতে সবুজ বাটনে ক্লিক করুন। সব তথ্য ইনপুট
-                দেওয়ার পর "যোগ করুন" বাটনে প্রেস করুন।
+                নতুন সোর্স যোগ করতে প্লাস বাটনে চাপুন। তারপরে তথ্য পূরণ করে
+                "যোগ করুন" বাটনে প্রেস করুন।
               </Text>
             </View>
 
@@ -714,7 +713,7 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E592D',
+    backgroundColor: '#1D2A74',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,

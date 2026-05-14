@@ -11,7 +11,7 @@ import React, {useEffect, useState} from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
-import api from '../../../api';
+import api from '../../api';
 
 const weeklySummary = [
   {label: 'মোট বিক্রয়', value: '৳ ২,১০,৫০০', color: '#10165F'},

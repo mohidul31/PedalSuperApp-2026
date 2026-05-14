@@ -11,7 +11,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import api from '../../api';
-import styles from '../../styles/SMEDashboardScreen.styles';
+import styles from '../../styles/SmeDashboardScreen.styles';
 
 const weeklySummary = [
   {label: 'মোট বিক্রয়', value: '৳ ২,১০,৫০০', color: '#10165F'},
@@ -27,7 +27,7 @@ const monthlySummary = [
   {label: 'নেট লাভ', value: '৳ ১,২২,৮০০', color: '#138A36', highlight: '#EDF7F0'},
 ];
 
-export default function SMEDashboardScreen() {
+export default function SmeDashboardScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [todaySells, setTodaySells] = useState(null);
   const [monthSells, setMonthSells] = useState(null);

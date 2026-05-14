@@ -1,5 +1,5 @@
 import {SceneMap, TabView} from 'react-native-tab-view';
-import {SafeAreaView} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import React, {useState} from 'react';
 import {useWindowDimensions} from 'react-native';
 

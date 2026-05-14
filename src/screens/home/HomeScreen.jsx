@@ -11,19 +11,18 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import React from 'react';
 import menuItems from '../../data/menuItems';
 import QuickActionCard from '../../components/home/QuickActionCard';
+import ScreenHeader from '../../components/common/ScreenHeader';
 import styles from '../../styles/HomeScreen.styles';
 
 export default function HomeScreen({navigation}) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F9FF" />
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Icon name="menu" type="material" size={26} color="#2E3192" />
-        </TouchableOpacity>
-        <Text style={styles.title}>PEDAL</Text>
-        <Icon name="notifications-none" type="material" size={26} color="#2E3192" />
-      </View>
+      <ScreenHeader
+        navigation={navigation}
+        rightIcon="notifications-none"
+        onRightPress={() => {}}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}

@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import React, {useRef, useState} from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import styles from '../../styles/ProvideOTPScreen.styles';
+import styles from '../../styles/ProvideOtpScreen.styles';
 
-const ProvideOTPScreen = () => {
+const ProvideOtpScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const {phoneNumber} = route.params || {};
@@ -110,4 +110,4 @@ const ProvideOTPScreen = () => {
   );
 };
 
-export default ProvideOTPScreen;
+export default ProvideOtpScreen;

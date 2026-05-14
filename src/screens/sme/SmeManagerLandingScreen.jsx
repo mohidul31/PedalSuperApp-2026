@@ -1,9 +1,9 @@
 import {SceneMap, TabView} from 'react-native-tab-view';
-import {SafeAreaView} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import React, {useState} from 'react';
 import {useWindowDimensions} from 'react-native';
 
-import SMEDashboardScreen from './SMEDashboardScreen';
+import SmeDashboardScreen from './SmeDashboardScreen';
 import ScreenHeader from '../../components/common/ScreenHeader';
 import SegmentedTabBar from '../../components/common/SegmentedTabBar';
 import SellScreen from './SellScreen';
@@ -11,7 +11,7 @@ import StockManagerScreen from './StockManagerScreen';
 import styles from '../../styles/SmeManagerLandingScreen.styles';
 
 const renderScene = SceneMap({
-  home: SMEDashboardScreen,
+  home: SmeDashboardScreen,
   sell: SellScreen,
   stockManager: StockManagerScreen,
 });

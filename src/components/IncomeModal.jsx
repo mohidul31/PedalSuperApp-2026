@@ -8,12 +8,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import {Button, Icon} from '@rneui/themed';
 import React, {useEffect, useState} from 'react';
-import {Row, Rows, Table} from 'react-native-table-component';
 
-import {COLORS} from '../styles/colors';
 import DatePicker from 'react-native-date-picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../api';
 
@@ -36,10 +34,6 @@ export default function IncomeModal({
   fetchIncomes,
   onClose,
 }) {
-  const ROW_HEIGHT = 60;
-  const tableHead = ['বিষয়ের নাম', 'পরিকল্পিত', 'প্রকৃত', 'মুছুন'];
-  const widthArr = ['35%', '25%', '25%', '15%'];
-
   const [openStartPicker, setOpenStartPicker] = useState(false);
   const [openEndPicker, setOpenEndPicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,14 +67,11 @@ export default function IncomeModal({
       setIsLoading(true);
       const response = await api.get(`/api/incomePlan/${incomePlanId}`);
       const income = response.data.data;
-
       setName(income.name);
-
       const parseDate = dateStr => {
         const [day, month, year] = dateStr.split('/').map(Number);
         return new Date(year, month - 1, day);
       };
-
       setStartDate(parseDate(income.planStartDate));
       setEndDate(parseDate(income.planEndDate));
       setIncomeItems(
@@ -89,16 +80,18 @@ export default function IncomeModal({
           name: item.sectorName,
           planned: item.plannedAmount.toString(),
           actual: item.actualAmount.toString(),
-          subItems: item.sectorDetails ? item.sectorDetails.map(subItem => ({
-            id: Date.now() + Math.random(),
-            name: subItem.name,
-            planned: subItem.plannedAmount.toString(),
-            actual: subItem.actualAmount.toString()
-          })) : []
+          subItems: item.sectorDetails
+            ? item.sectorDetails.map(subItem => ({
+                id: Date.now() + Math.random(),
+                name: subItem.name,
+                planned: subItem.plannedAmount.toString(),
+                actual: subItem.actualAmount.toString(),
+              }))
+            : [],
         })),
       );
     } catch (error) {
-      showToast('আয় লোড করতে ব্যর্থ', 'error');
+      showToast('আয় লোড করতে ব্যর্থ', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +100,7 @@ export default function IncomeModal({
   const addSubIncomeItem = () => {
     setSubIncomeItems(prev => [
       ...prev,
-      { id: Date.now() + Math.random(), name: '', planned: '', actual: '' }
+      {id: Date.now() + Math.random(), name: '', planned: '', actual: ''},
     ]);
     setSubErrorMessage('');
   };
@@ -115,121 +108,56 @@ export default function IncomeModal({
   const updateSubIncomeItem = (id, field, value) => {
     setSubIncomeItems(prev =>
       prev.map(item =>
-        item.id === id 
-          ? { 
-              ...item, 
-              [field]: field === 'name' ? value : Math.floor(parseFloat(value) || 0).toString()
-            } 
-          : item
-      )
+        item.id === id
+          ? {
+              ...item,
+              [field]:
+                field === 'name'
+                  ? value
+                  : Math.floor(parseFloat(value) || 0).toString(),
+            }
+          : item,
+      ),
     );
   };
 
-  const removeSubIncomeItem = (id) => {
+  const removeSubIncomeItem = id => {
     setSubIncomeItems(prev => prev.filter(item => item.id !== id));
   };
 
   const handleAddSubItems = () => {
-    const hasEmptyFields = subIncomeItems.some(item => 
-      !item.name.trim() || !item.planned || !item.actual
+    const hasEmptyFields = subIncomeItems.some(
+      item => !item.name.trim() || !item.planned || !item.actual,
     );
-
     if (subIncomeItems.length === 0 || hasEmptyFields) {
-      setSubErrorMessage('সব সাব-আইটেমের জন্য নাম, পরিকল্পিত এবং প্রকৃত পরিমাণ প্রয়োজন');
+      setSubErrorMessage(
+        'সব সাব-আইটেমের জন্য নাম, পরিকল্পিত এবং প্রকৃত পরিমাণ প্রয়োজন',
+      );
       return;
     }
-
     setIncomeItems(prev =>
       prev.map(item =>
         item.id === selectedItemId
-          ? { ...item, subItems: subIncomeItems }
-          : item
-      )
+          ? {...item, subItems: subIncomeItems}
+          : item,
+      ),
     );
     setSubModalVisible(false);
     setSubIncomeItems([]);
     setSubErrorMessage('');
   };
 
-  const tableData = incomeItems.map(item => [
-    <TextInput
-      style={styles.slimInput}
-      placeholder="বিষয়ের নাম"
-      placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-      value={item.name}
-      onChangeText={text => updateIncomeItem(item.id, 'name', text)}
-    />,
-    <TextInput
-      style={styles.slimInput}
-      placeholder="পরিকল্পিত"
-      placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-      value={item.planned}
-      onChangeText={text => updateIncomeItem(item.id, 'planned', text)}
-      keyboardType="numeric"
-    />,
-    <TextInput
-      style={styles.slimInput}
-      placeholder="প্রকৃত"
-      placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-      value={item.actual}
-      onChangeText={text => updateIncomeItem(item.id, 'actual', text)}
-      keyboardType="numeric"
-    />,
-    <View style={styles.actionButtons}>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => {
-          setSelectedItemId(item.id);
-          setSubIncomeItems(item.subItems || []);
-          setSubModalVisible(true);
-          setSubErrorMessage('');
-        }}>
-        <Icon name="add" size={16} color="#28A745" />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => removeIncomeItem(item.id)}>
-        <Icon name="delete" size={16} color="#FF4D4F" />
-      </TouchableOpacity>
-    </View>,
-  ]);
-
-  const subTableData = subIncomeItems.map(item => [
-    <TextInput
-      style={styles.slimInput}
-      placeholder="বিষয়ের নাম"
-      placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-      value={item.name}
-      onChangeText={text => updateSubIncomeItem(item.id, 'name', text)}
-    />,
-    <TextInput
-      style={styles.slimInput}
-      placeholder="পরিকল্পিত"
-      placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-      value={item.planned}
-      onChangeText={text => updateSubIncomeItem(item.id, 'planned', text)}
-      keyboardType="numeric"
-    />,
-    <TextInput
-      style={styles.slimInput}
-      placeholder="প্রকৃত"
-      placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-      value={item.actual}
-      onChangeText={text => updateSubIncomeItem(item.id, 'actual', text)}
-      keyboardType="numeric"
-    />,
-    <TouchableOpacity
-      style={styles.deleteButton}
-      onPress={() => removeSubIncomeItem(item.id)}>
-      <Icon name="delete" size={16} color="#FF4D4F" />
-    </TouchableOpacity>,
-  ]);
-
-  const tableFooter = ['মোট', totalPlanned, totalActual, '-'];
-
   const formatDate = date => {
     if (!date) return '';
     return date.toISOString().split('T')[0];
+  };
+
+  const formatDateDisplay = date => {
+    if (!date) return 'তারিখ বেছে নিন';
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
   };
 
   const handleEndDateConfirm = date => {
@@ -244,43 +172,46 @@ export default function IncomeModal({
   };
 
   const handleSave = async () => {
-    const hasEmptyFields = incomeItems.some(item => 
-      !item.name.trim() || !item.planned || !item.actual
+    const hasEmptyFields = incomeItems.some(
+      item => !item.name.trim() || !item.planned || !item.actual,
     );
-    
     if (incomeItems.length === 0 || hasEmptyFields) {
-      setErrorMessage('সব আইটেমের জন্য নাম, পরিকল্পিত এবং প্রকৃত পরিমাণ প্রয়োজন');
+      setErrorMessage(
+        'সব আইটেমের জন্য নাম, পরিকল্পিত এবং প্রকৃত পরিমাণ প্রয়োজন',
+      );
       return;
     }
-
     setIsSaving(true);
     try {
       if (isEditMode && incomePlanId) {
         const payload = {
           id: incomePlanId,
-          name: name,
+          name,
           planStartDate: formatDate(startDate),
           planEndDate: formatDate(endDate),
           incomePlanDetails: incomeItems.map(item => ({
-            incomePlanId: incomePlanId,
+            incomePlanId,
             sectorName: item.name,
             plannedAmount: item.planned,
             actualAmount: item.actual,
             sectorDetails: (item.subItems || []).map(subItem => ({
-              incomePlanId: incomePlanId,
+              incomePlanId,
               name: subItem.name,
               plannedAmount: subItem.planned,
-              actualAmount: subItem.actual
-            }))
+              actualAmount: subItem.actual,
+            })),
           })),
         };
-        const response = await api.put(`/api/incomePlan/${incomePlanId}`, payload);
+        const response = await api.put(
+          `/api/incomePlan/${incomePlanId}`,
+          payload,
+        );
         if (response.data.success) {
-          showToast('আয় সফলভাবে আপডেট করা হয়েছে');
+          showToast('আয় সফলভাবে আপডেট করা হয়েছে');
         }
       } else {
         const payload = {
-          name: name,
+          name,
           planStartDate: formatDate(startDate),
           planEndDate: formatDate(endDate),
           incomePlanDetails: incomeItems.map(item => ({
@@ -290,16 +221,15 @@ export default function IncomeModal({
             sectorDetails: (item.subItems || []).map(subItem => ({
               name: subItem.name,
               plannedAmount: subItem.planned,
-              actualAmount: subItem.actual
-            }))
+              actualAmount: subItem.actual,
+            })),
           })),
         };
         const response = await api.post('/api/incomePlan', payload);
         if (response.data.success) {
-          showToast('আয় যোগ করা হয়েছে');
+          showToast('আয় যোগ করা হয়েছে');
         }
       }
-
       setModalVisible(false);
       fetchIncomes();
       if (!isEditMode) {
@@ -310,9 +240,19 @@ export default function IncomeModal({
       }
       setErrorMessage('');
     } catch (error) {
-      setErrorMessage('আয় সংরক্ষণে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
+      setErrorMessage(
+        'আয় সংরক্ষণে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।',
+      );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setModalVisible(false);
     }
   };
 
@@ -322,120 +262,218 @@ export default function IncomeModal({
         animationType="slide"
         transparent={true}
         visible={modalVisible}
-        onRequestClose={() => onClose?.() || setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+        onRequestClose={handleClose}>
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
             {isLoading && isEditMode ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-                <Text style={styles.loadingText}>আয় লোড হচ্ছে...</Text>
+                <ActivityIndicator size="large" color="#1D2A74" />
+                <Text style={styles.loadingText}>আয় লোড হচ্ছে...</Text>
               </View>
             ) : (
               <>
-                <Text style={styles.modalTitle}>
-                  {isEditMode ? 'আয় সম্পাদনা করুন' : 'নতুন আয় যোগ করুন'}
-                </Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="আয়ের নাম লিখুন"
-                  placeholderTextColor={COLORS.PLACEHOLDER_TEXT}
-                  value={name}
-                  onChangeText={setName}
-                />
-
-                <TouchableOpacity
-                  style={styles.datePickerContainer}
-                  onPress={() => setOpenStartPicker(true)}>
-                  <Text style={styles.dateText}>
-                    শুরুর তারিখ: {formatDate(startDate)}
+                <View style={styles.sheetHeader}>
+                  <Text style={styles.sheetTitle}>
+                    {isEditMode ? 'আয় সম্পাদনা করুন' : 'নতুন আয় তৈরি করুন'}
                   </Text>
-                </TouchableOpacity>
-                <DatePicker
-                  modal
-                  mode="date"
-                  open={openStartPicker}
-                  date={startDate || new Date()}
-                  onConfirm={date => {
-                    setOpenStartPicker(false);
-                    setStartDate(date);
-                    if (endDate && endDate <= date) {
-                      const newEndDate = new Date(date);
-                      newEndDate.setDate(date.getDate() + 1);
-                      setEndDate(newEndDate);
-                    }
-                  }}
-                  onCancel={() => {
-                    setOpenStartPicker(false);
-                  }}
-                />
-
-                <TouchableOpacity
-                  style={styles.datePickerContainer}
-                  onPress={() => setOpenEndPicker(true)}>
-                  <Text style={styles.dateText}>
-                    শেষের তারিখ: {formatDate(endDate)}
-                  </Text>
-                </TouchableOpacity>
-                <DatePicker
-                  modal
-                  mode="date"
-                  open={openEndPicker}
-                  date={endDate || new Date()}
-                  minimumDate={startDate}
-                  onConfirm={handleEndDateConfirm}
-                  onCancel={() => {
-                    setOpenEndPicker(false);
-                  }}
-                />
-
-                <View style={styles.addNewButtonContainer}>
-                  <Button
-                    title="+ বিষয় যোগ করুন"
-                    buttonStyle={styles.addNewButton}
-                    titleStyle={styles.addNewText}
-                    onPress={() => {
-                      addIncomeItem();
-                      setErrorMessage('');
-                    }}
-                  />
-                </View>
-
-                <View style={styles.tableContainer}>
-                  <ScrollView style={{maxHeight: ROW_HEIGHT * 5}}>
-                    <Table borderStyle={{borderWidth: 1, borderColor: '#e0e0e0'}}>
-                      <Row
-                        data={tableHead}
-                        widthArr={widthArr}
-                        style={styles.slimModalHead}
-                        textStyle={styles.slimHeadText}
-                      />
-                      <Rows
-                        data={tableData}
-                        widthArr={widthArr}
-                        style={styles.slimRow}
-                        textStyle={styles.text}
-                      />
-                      <Row
-                        data={tableFooter}
-                        widthArr={widthArr}
-                        style={styles.footerRow}
-                        textStyle={styles.footerText}
-                      />
-                    </Table>
-                  </ScrollView>
-                </View>
-
-                {errorMessage ? (
-                  <Text style={styles.errorText}>{errorMessage}</Text>
-                ) : null}
-
-                <View style={styles.modalButtonContainer}>
                   <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => onClose?.() || setModalVisible(false)}>
-                    <Text style={styles.buttonText}>বাতিল</Text>
+                    onPress={handleClose}
+                    style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color="#1D2A74" />
                   </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.sheetContent}>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>আয়ের নাম লিখুন</Text>
+                    <View style={styles.inputBox}>
+                      <TextInput
+                        placeholder="উদা: জুন মাসের আয়"
+                        placeholderTextColor="#8F96B0"
+                        value={name}
+                        onChangeText={setName}
+                        style={styles.textInput}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>শুরুর তারিখ</Text>
+                    <TouchableOpacity
+                      style={styles.inputBoxRow}
+                      onPress={() => setOpenStartPicker(true)}>
+                      <Text
+                        style={[
+                          styles.textInput,
+                          !startDate && styles.placeholderText,
+                        ]}>
+                        {formatDateDisplay(startDate)}
+                      </Text>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={22}
+                        color="#1D2A74"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <DatePicker
+                    modal
+                    mode="date"
+                    open={openStartPicker}
+                    date={startDate || new Date()}
+                    onConfirm={date => {
+                      setOpenStartPicker(false);
+                      setStartDate(date);
+                      if (endDate && endDate <= date) {
+                        const newEndDate = new Date(date);
+                        newEndDate.setDate(date.getDate() + 1);
+                        setEndDate(newEndDate);
+                      }
+                    }}
+                    onCancel={() => setOpenStartPicker(false)}
+                  />
+
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>শেষের তারিখ</Text>
+                    <TouchableOpacity
+                      style={styles.inputBoxRow}
+                      onPress={() => setOpenEndPicker(true)}>
+                      <Text
+                        style={[
+                          styles.textInput,
+                          !endDate && styles.placeholderText,
+                        ]}>
+                        {formatDateDisplay(endDate)}
+                      </Text>
+                      <Ionicons
+                        name="calendar-outline"
+                        size={22}
+                        color="#1D2A74"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <DatePicker
+                    modal
+                    mode="date"
+                    open={openEndPicker}
+                    date={endDate || new Date()}
+                    minimumDate={startDate}
+                    onConfirm={handleEndDateConfirm}
+                    onCancel={() => setOpenEndPicker(false)}
+                  />
+
+                  <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>আয়ের বিবরণ</Text>
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => {
+                        addIncomeItem();
+                        setErrorMessage('');
+                      }}>
+                      <Ionicons name="add" size={18} color="#FFFFFF" />
+                      <Text style={styles.addButtonText}>নতুন ঘর</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.tableCard}>
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.tableHeaderText, {flex: 2}]}>
+                        সোর্স
+                      </Text>
+                      <Text style={styles.tableHeaderText}>পরিকল্পিত</Text>
+                      <Text style={styles.tableHeaderText}>প্রাপ্ত</Text>
+                      <View style={{width: 68}} />
+                    </View>
+                    <ScrollView style={{maxHeight: 240}} nestedScrollEnabled>
+                      {incomeItems.map(item => (
+                        <View key={item.id} style={styles.tableRow}>
+                          <TextInput
+                            style={[styles.cellInput, {flex: 2}]}
+                            placeholder="নাম"
+                            placeholderTextColor="#BBC0D3"
+                            value={item.name}
+                            onChangeText={text =>
+                              updateIncomeItem(item.id, 'name', text)
+                            }
+                          />
+                          <TextInput
+                            style={styles.cellInput}
+                            placeholder="0"
+                            placeholderTextColor="#BBC0D3"
+                            keyboardType="numeric"
+                            value={item.planned}
+                            onChangeText={text =>
+                              updateIncomeItem(item.id, 'planned', text)
+                            }
+                          />
+                          <TextInput
+                            style={styles.cellInput}
+                            placeholder="0"
+                            placeholderTextColor="#BBC0D3"
+                            keyboardType="numeric"
+                            value={item.actual}
+                            onChangeText={text =>
+                              updateIncomeItem(item.id, 'actual', text)
+                            }
+                          />
+                          <View style={styles.rowActions}>
+                            <TouchableOpacity
+                              style={styles.rowActionBtn}
+                              onPress={() => {
+                                setSelectedItemId(item.id);
+                                setSubIncomeItems(item.subItems || []);
+                                setSubModalVisible(true);
+                                setSubErrorMessage('');
+                              }}>
+                              <Ionicons
+                                name="add-circle-outline"
+                                size={17}
+                                color="#1D2A74"
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.rowActionBtn}
+                              onPress={() => removeIncomeItem(item.id)}>
+                              <Ionicons
+                                name="trash-outline"
+                                size={17}
+                                color="#E43A3A"
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))}
+                    </ScrollView>
+                    <View style={styles.tableFooter}>
+                      <Text style={[styles.footerLabel, {flex: 2}]}>মোট</Text>
+                      <Text style={styles.footerValue}>{totalPlanned}</Text>
+                      <Text style={styles.footerValue}>{totalActual}</Text>
+                      <View style={{width: 68}} />
+                    </View>
+                  </View>
+
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryBox}>
+                      <Text style={styles.summaryLabel}>মোট পরিকল্পিত</Text>
+                      <Text style={styles.summaryAmount}>{totalPlanned} ৳</Text>
+                    </View>
+                    <View style={[styles.summaryBox, styles.summaryBoxGreen]}>
+                      <Text style={[styles.summaryLabel, {color: '#1D2A74'}]}>
+                        মোট প্রাপ্ত
+                      </Text>
+                      <Text
+                        style={[styles.summaryAmount, {color: '#0E3E1F'}]}>
+                        {totalActual} ৳
+                      </Text>
+                    </View>
+                  </View>
+
+                  {errorMessage ? (
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  ) : null}
+
                   <TouchableOpacity
                     style={[
                       styles.saveButton,
@@ -448,19 +486,25 @@ export default function IncomeModal({
                         <ActivityIndicator
                           size="small"
                           color="#fff"
-                          style={styles.loadingIndicator}
+                          style={{marginRight: 8}}
                         />
                       )}
-                      <Text style={styles.buttonText}>
+                      <Text style={styles.saveButtonText}>
                         {isSaving
                           ? 'সংরক্ষণ হচ্ছে...'
                           : isEditMode
-                          ? 'আপডেট'
-                          : 'সংরক্ষণ'}
+                          ? 'আপডেট করুন'
+                          : 'সংরক্ষণ করুন'}
                       </Text>
                     </View>
                   </TouchableOpacity>
-                </View>
+
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={handleClose}>
+                    <Text style={styles.cancelText}>বাতিল</Text>
+                  </TouchableOpacity>
+                </ScrollView>
               </>
             )}
           </View>
@@ -472,35 +516,74 @@ export default function IncomeModal({
         transparent={true}
         visible={subModalVisible}
         onRequestClose={() => setSubModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>সাব-আইটেম যোগ করুন</Text>
-
-            <View style={styles.addNewButtonContainer}>
-              <Button
-                title="+ বিষয় যোগ করুন"
-                buttonStyle={styles.addNewButton}
-                titleStyle={styles.addNewText}
-                onPress={addSubIncomeItem}
-              />
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>সাব-আইটেম যোগ করুন</Text>
+              <TouchableOpacity
+                onPress={() => setSubModalVisible(false)}
+                style={styles.closeButton}>
+                <Ionicons name="close" size={24} color="#1D2A74" />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.tableContainer}>
-              <ScrollView style={{maxHeight: ROW_HEIGHT * 5}}>
-                <Table borderStyle={{borderWidth: 1, borderColor: '#e0e0e0'}}>
-                  <Row
-                    data={tableHead}
-                    widthArr={widthArr}
-                    style={styles.slimModalHead}
-                    textStyle={styles.slimHeadText}
-                  />
-                  <Rows
-                    data={subTableData}
-                    widthArr={widthArr}
-                    style={styles.slimRow}
-                    textStyle={styles.text}
-                  />
-                </Table>
+            <TouchableOpacity
+              style={styles.modalAddButton}
+              onPress={addSubIncomeItem}>
+              <Ionicons name="add" size={18} color="#FFFFFF" />
+              <Text style={styles.addButtonText}> বিষয় যোগ করুন</Text>
+            </TouchableOpacity>
+
+            <View style={styles.tableCard}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.tableHeaderText, {flex: 2}]}>সোর্স</Text>
+                <Text style={styles.tableHeaderText}>পরিকল্পিত</Text>
+                <Text style={styles.tableHeaderText}>প্রাপ্ত</Text>
+                <View style={{width: 40}} />
+              </View>
+              <ScrollView style={{maxHeight: 220}} nestedScrollEnabled>
+                {subIncomeItems.map(item => (
+                  <View key={item.id} style={styles.tableRow}>
+                    <TextInput
+                      style={[styles.cellInput, {flex: 2}]}
+                      placeholder="নাম"
+                      placeholderTextColor="#BBC0D3"
+                      value={item.name}
+                      onChangeText={text =>
+                        updateSubIncomeItem(item.id, 'name', text)
+                      }
+                    />
+                    <TextInput
+                      style={styles.cellInput}
+                      placeholder="0"
+                      placeholderTextColor="#BBC0D3"
+                      keyboardType="numeric"
+                      value={item.planned}
+                      onChangeText={text =>
+                        updateSubIncomeItem(item.id, 'planned', text)
+                      }
+                    />
+                    <TextInput
+                      style={styles.cellInput}
+                      placeholder="0"
+                      placeholderTextColor="#BBC0D3"
+                      keyboardType="numeric"
+                      value={item.actual}
+                      onChangeText={text =>
+                        updateSubIncomeItem(item.id, 'actual', text)
+                      }
+                    />
+                    <TouchableOpacity
+                      style={[styles.rowActionBtn, {width: 40}]}
+                      onPress={() => removeSubIncomeItem(item.id)}>
+                      <Ionicons
+                        name="trash-outline"
+                        size={17}
+                        color="#E43A3A"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </ScrollView>
             </View>
 
@@ -508,16 +591,28 @@ export default function IncomeModal({
               <Text style={styles.errorText}>{subErrorMessage}</Text>
             ) : null}
 
-            <View style={styles.modalButtonContainer}>
+            <View style={styles.infoBox}>
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color="#1D2A74"
+              />
+              <Text style={styles.infoText}>
+                নতুন সোর্স যোগ করতে প্লাস বাটনে চাপুন। তারপরে তথ্য পূরণ করে
+                "যোগ করুন" বাটনে প্রেস করুন।
+              </Text>
+            </View>
+
+            <View style={styles.modalFooter}>
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={styles.modalCancelButton}
                 onPress={() => setSubModalVisible(false)}>
-                <Text style={styles.buttonText}>বাতিল</Text>
+                <Text style={styles.modalCancelText}>বাতিল</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.saveButton}
+                style={styles.modalConfirmButton}
                 onPress={handleAddSubItems}>
-                <Text style={styles.buttonText}>যোগ করুন</Text>
+                <Text style={styles.modalConfirmText}>যোগ করুন</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -528,188 +623,287 @@ export default function IncomeModal({
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
   },
-  modalContainer: {
-    width: '90%',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
+    maxHeight: '92%',
   },
   loadingContainer: {
-    flex: 1,
+    paddingVertical: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 16,
-    color: '#333',
+    color: '#6F759B',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 20,
-  },
-  datePickerContainer: {
-    width: '100%',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    marginBottom: 20,
-    justifyContent: 'center',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  addNewButtonContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 20,
-  },
-  tableContainer: {
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  footerRow: {
-    height: 30,
-    backgroundColor: '#f0f0f0',
-  },
-  text: {
-    margin: 6,
-    textAlign: 'center',
-    color: 'black',
-  },
-  footerText: {
-    margin: 2,
-    textAlign: 'center',
-    color: 'black',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  deleteButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100%',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100%',
-    gap: 5,
-  },
-  actionButton: {
-    padding: 5,
-  },
-  modalButtonContainer: {
+  sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    gap: 10,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#6C757D',
-    paddingVertical: 12,
-    borderRadius: 8,
     alignItems: 'center',
-    elevation: 2,
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1D2A74',
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sheetContent: {
+    paddingBottom: 12,
+  },
+  field: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1D2A74',
+    marginBottom: 8,
+  },
+  inputBox: {
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  inputBoxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#1D2A74',
+  },
+  placeholderText: {
+    color: '#8F96B0',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1D2A74',
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1D2A74',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginLeft: 6,
+    fontSize: 13,
+  },
+  modalAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2C6D2F',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+  },
+  tableCard: {
+    backgroundColor: '#F8F9FF',
+    borderRadius: 22,
+    overflow: 'hidden',
+    marginBottom: 20,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF0FF',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  tableHeaderText: {
+    flex: 1,
+    color: '#6D7396',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEF0FF',
+    gap: 6,
+  },
+  cellInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    color: '#1D2A74',
+  },
+  rowActions: {
+    width: 68,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  rowActionBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#F0F1FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tableFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF0FF',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  footerLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D2A74',
+  },
+  footerValue: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D2A74',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  summaryBox: {
+    flex: 1,
+    backgroundColor: '#F0F1FA',
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+  },
+  summaryBoxGreen: {
+    backgroundColor: '#E5F8E8',
+  },
+  summaryLabel: {
+    color: '#6F759B',
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  summaryAmount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1D2A74',
+  },
+  errorText: {
+    color: '#E43A3A',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   saveButton: {
-    flex: 1,
-    backgroundColor: COLORS.PRIMARY || '#007BFF',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#1D2A74',
+    borderRadius: 24,
+    paddingVertical: 16,
     alignItems: 'center',
-    elevation: 2,
+    marginBottom: 12,
   },
   saveButtonDisabled: {
-    backgroundColor: '#80bdff',
-    opacity: 0.7,
+    backgroundColor: '#8A92B8',
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingIndicator: {
-    marginRight: 8,
-  },
-  addNewButton: {
-    backgroundColor: COLORS.PRIMARY || '#28A745',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  addNewText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  buttonText: {
-    color: '#fff',
+  saveButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  slimModalHead: {
-    height: 30,
-    backgroundColor: COLORS.PRIMARY,
+  cancelButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
   },
-  slimHeadText: {
-    margin: 2,
-    textAlign: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 10,
+  cancelText: {
+    color: '#1D2A74',
+    fontSize: 15,
+    fontWeight: '700',
   },
-  slimRow: {
-    height: 40,
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#F3F5FF',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 18,
   },
-  slimInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 2,
-    margin: 2,
-    borderRadius: 4,
-    textAlign: 'center',
-    fontSize: 12,
-    height: 30,
+  infoText: {
+    color: '#4B5478',
+    fontSize: 13,
+    lineHeight: 20,
+    flex: 1,
   },
-  errorText: {
-    color: '#FF4D4F',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 10,
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: '#F5F7FF',
+  },
+  modalCancelText: {
+    color: '#1D2A74',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: '#1D2A74',
+  },
+  modalConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

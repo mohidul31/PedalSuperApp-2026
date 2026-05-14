@@ -1,32 +1,41 @@
 import {
   ActivityIndicator,
-  Pressable,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
-  TouchableOpacity,
+  Text,
   View,
 } from 'react-native';
-import {Card, Icon, Text} from '@rneui/themed';
 import React, {useEffect, useState} from 'react';
 
-import {COLORS} from '../../../styles/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import api from '../../../api';
 
+const weeklySummary = [
+  {label: 'মোট বিক্রয়', value: '৳ ২,১০,৫০০', color: '#10165F'},
+  {label: 'মোট লাভ', value: '৳ ৪২,৩০০', color: '#138A36'},
+  {label: 'মোট খরচ', value: '৳ ১২,৪৫০', color: '#D11B1B'},
+  {label: 'নেট লাভ', value: '৳ ২৯,৮৫০', color: '#10165F', highlight: '#ECEBF9'},
+];
+
+const monthlySummary = [
+  {label: 'মোট বিক্রয়', value: '৳ ৮,৪০,০০০', color: '#10165F'},
+  {label: 'মোট লাভ', value: '৳ ১,৬৮,০০০', color: '#138A36'},
+  {label: 'মোট খরচ', value: '৳ ৪৫,২০০', color: '#D11B1B'},
+  {label: 'নেট লাভ', value: '৳ ১,২২,৮০০', color: '#138A36', highlight: '#EDF7F0'},
+];
+
 export default function SMEDashboardScreen() {
   const [isLoading, setIsLoading] = useState(false);
-  const [todaySells, setTodaySells] = useState(false);
-  const [monthSells, setMonthSells] = useState(false);
-  const [totalInStockProducts, setTotalInStockProducts] = useState(false);
-  const [totalPendingAmount, setTotalPendingAmount] = useState(false);
+  const [todaySells, setTodaySells] = useState(null);
+  const [monthSells, setMonthSells] = useState(null);
+  const [totalInStockProducts, setTotalInStockProducts] = useState(null);
+  const [totalPendingAmount, setTotalPendingAmount] = useState(null);
 
   const showToast = (message, type = 'success') => {
-    Toast.show({
-      type,
-      text1: message,
-      position: 'bottom',
-    });
+    Toast.show({type, text1: message, position: 'bottom'});
   };
 
   useEffect(() => {
@@ -42,172 +51,365 @@ export default function SMEDashboardScreen() {
       setTotalInStockProducts(response.data.totalInStockProducts);
       setTotalPendingAmount(response.data.totalPendingAmount);
     } catch (error) {
-      setTodaySells(false);
-      setMonthSells(false);
-      setTotalInStockProducts(false);
-      setTotalPendingAmount(false);
+      setTodaySells(null);
+      setMonthSells(null);
+      setTotalInStockProducts(null);
+      setTotalPendingAmount(null);
       showToast('লোড করতে ব্যর্থ', 'error');
-      console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRefresh = () => {
-    fetchDashboardData();
-  };
+  const topCards = [
+    {
+      title: 'আজকের বিক্রয়',
+      value: todaySells !== null ? `৳ ${todaySells}` : '—',
+      icon: 'cash-multiple',
+      iconBg: '#EEF0FF',
+      iconColor: '#1A237E',
+      badge: '+১২%',
+      badgeBg: '#A8F28C',
+    },
+    {
+      title: 'এই মাসের বিক্রয়',
+      value: monthSells !== null ? `৳ ${monthSells}` : '—',
+      icon: 'trending-up',
+      iconBg: '#EDF7F1',
+      iconColor: '#2E7D32',
+      badge: '+৮%',
+      badgeBg: '#A8F28C',
+    },
+    {
+      title: 'মোট স্টক',
+      value: totalInStockProducts !== null ? `${totalInStockProducts} পিস` : '—',
+      icon: 'archive',
+      iconBg: '#FFF4DF',
+      iconColor: '#F4B400',
+      badge: 'স্টক',
+      badgeBg: '#FFE39E',
+      badgeColor: '#8A5B00',
+    },
+    {
+      title: 'মোট বাকি',
+      value: totalPendingAmount !== null ? `৳ ${totalPendingAmount}` : '—',
+      icon: 'wallet-outline',
+      iconBg: '#FBE9E9',
+      iconColor: '#D32F2F',
+      badge: 'বাকি',
+      badgeBg: '#FFD6D1',
+      badgeColor: '#D32F2F',
+    },
+  ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Text h3 style={styles.header}>
-          ড্যাশবোর্ড
+    <ScrollView
+      style={styles.page}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={fetchDashboardData}
+          colors={['#111B74']}
+        />
+      }>
+      <View style={styles.hero}>
+        <Text style={styles.greeting}>স্বাগতম, ম্যানেজার</Text>
+        <Text style={styles.subtitle}>
+          আপনার ব্যবসার আজকের বর্তমান অবস্থা এখানে দেখুন।
         </Text>
-        <Pressable
-          style={styles.reloadButton}
-          onPress={handleRefresh}
-          disabled={isLoading}>
-          <Ionicons
-            name="reload"
-            size={20}
-            color={isLoading ? 'gray' : COLORS.PRIMARY}
-          />
-          <Text
+      </View>
+
+      <View style={styles.cardsGrid}>
+        {topCards.map(card => (
+          <View key={card.title} style={styles.statCard}>
+            <View style={styles.cardTopRow}>
+              <View
+                style={[styles.cardIconWrap, {backgroundColor: card.iconBg}]}>
+                <MaterialCommunityIcons
+                  name={card.icon}
+                  size={22}
+                  color={card.iconColor}
+                />
+              </View>
+              <View
+                style={[styles.cardBadge, {backgroundColor: card.badgeBg}]}>
+                <Text
+                  style={[
+                    styles.cardBadgeText,
+                    card.badgeColor ? {color: card.badgeColor} : null,
+                  ]}>
+                  {card.badge}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.cardLabel}>{card.title}</Text>
+            {isLoading ? (
+              <ActivityIndicator
+                size="small"
+                color="#111B74"
+                style={{marginTop: 6}}
+              />
+            ) : (
+              <Text style={styles.cardValue}>{card.value}</Text>
+            )}
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>৭ দিনের সারাংশ</Text>
+      </View>
+      <View style={styles.summaryCard}>
+        {weeklySummary.map((item, index) => (
+          <View
+            key={item.label}
             style={[
-              styles.reloadText,
-              {color: isLoading ? 'gray' : COLORS.PRIMARY},
+              styles.summaryRow,
+              item.highlight ? {backgroundColor: item.highlight} : null,
+              index !== weeklySummary.length - 1
+                ? styles.summaryDivider
+                : null,
             ]}>
-            রিফ্রেশ
+            <Text
+              style={[
+                styles.summaryLabel,
+                item.highlight ? styles.summaryLabelStrong : null,
+              ]}>
+              {item.label}
+            </Text>
+            <Text style={[styles.summaryValue, {color: item.color}]}>
+              {item.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>এই মাস</Text>
+      </View>
+      <View style={styles.summaryCard}>
+        {monthlySummary.map((item, index) => (
+          <View
+            key={item.label}
+            style={[
+              styles.summaryRow,
+              item.highlight ? {backgroundColor: item.highlight} : null,
+              index !== monthlySummary.length - 1
+                ? styles.summaryDivider
+                : null,
+            ]}>
+            <Text
+              style={[
+                styles.summaryLabel,
+                item.highlight ? styles.summaryLabelStrong : null,
+              ]}>
+              {item.label}
+            </Text>
+            <Text style={[styles.summaryValue, {color: item.color}]}>
+              {item.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={[styles.alertCard, styles.alertDanger]}>
+        <View style={[styles.alertIconWrap, styles.alertDangerIconWrap]}>
+          <Ionicons name="warning" size={22} color="#FFFFFF" />
+        </View>
+        <View style={styles.alertBody}>
+          <Text style={styles.alertTitleDanger}>কম স্টক: ৩ টি</Text>
+          <Text style={styles.alertTextDanger}>
+            কিছু মালামাল দ্রুত শেষ হচ্ছে।
           </Text>
-        </Pressable>
+        </View>
       </View>
 
-      <View style={styles.row}>
-        <InfoCard
-          title="আজকের বিক্রয়"
-          value={`৳ ${todaySells}`}
-          icon="chart-bar"
-          colors={['#6DD5FA', '#2980B9']}
-          isLoading={isLoading}
-        />
-        <InfoCard
-          title="এই মাসের বিক্রয়"
-          value={`৳ ${monthSells}`}
-          icon="chart-line"
-          colors={['#48C6EF', '#6F86D6']}
-          isLoading={isLoading}
-        />
+      <View style={[styles.alertCard, styles.alertWarning]}>
+        <View style={[styles.alertIconWrap, styles.alertWarningIconWrap]}>
+          <MaterialCommunityIcons name="cash-clock" size={22} color="#111B74" />
+        </View>
+        <View style={styles.alertBody}>
+          <Text style={styles.alertTitle}>আজ বাকি বিক্রি: ৳ ১,২০০</Text>
+          <Text style={styles.alertText}>বাকি টাকা সংগ্রহের সময় হয়েছে।</Text>
+        </View>
       </View>
-
-      <View style={styles.row}>
-        <InfoCard
-          title="মোট স্টক"
-          value={`${totalInStockProducts} পিস`}
-          icon="cube"
-          colors={['#FAD961', '#F76B1C']}
-          isLoading={isLoading}
-        />
-        <InfoCard
-          title="মোট বাকি"
-          value={`৳ ${totalPendingAmount}`}
-          icon="dollar-sign"
-          colors={['#FF758C', '#FF7EB3']}
-          isLoading={isLoading}
-        />
-      </View>
-    </View>
+    </ScrollView>
   );
 }
 
-const InfoCard = ({title, value, icon, colors, isLoading}) => (
-  <LinearGradient colors={colors} style={styles.card}>
-    <View style={styles.cardContent}>
-      <Icon
-        name={icon}
-        type="font-awesome-5"
-        size={28}
-        color="#fff"
-        containerStyle={styles.icon}
-      />
-      <Text style={styles.title}>{title}</Text>
-      {isLoading ? (
-        <ActivityIndicator size="small" color="#fff" style={styles.loader} />
-      ) : (
-        <Text style={styles.value}>{value}</Text>
-      )}
-    </View>
-  </LinearGradient>
-);
-
 const styles = StyleSheet.create({
-  container: {
+  page: {
     flex: 1,
-    padding: 15,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F8F6FD',
   },
-  headerContainer: {
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  hero: {
+    marginBottom: 24,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111B74',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#5B6079',
+    lineHeight: 22,
+  },
+  cardsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 30,
   },
-  header: {
-    textAlign: 'left',
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  refreshIcon: {
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  card: {
-    flex: 1,
-    borderRadius: 15,
-    padding: 20,
-    margin: 5,
+  statCard: {
+    width: '47%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 16,
+    shadowColor: '#ABB1D5',
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: {width: 0, height: 6},
     elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
-  cardContent: {
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  cardIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     alignItems: 'center',
   },
-  icon: {
-    marginBottom: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 10,
-    borderRadius: 10,
+  cardBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#157A10',
   },
-  title: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#fff',
+  cardLabel: {
+    fontSize: 13,
+    color: '#4F5369',
+    marginBottom: 6,
   },
-  value: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#fff',
-    marginTop: 5,
+  cardValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111B74',
   },
-  loader: {
-    marginTop: 5,
+  sectionHeader: {
+    marginBottom: 14,
   },
-  reloadButton: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111B74',
+  },
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 28,
+    shadowColor: '#B3B7D5',
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: {width: 0, height: 6},
+    elevation: 4,
+  },
+  summaryRow: {
+    minHeight: 64,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
-    borderRadius: 5,
-    // backgroundColor: '#f0f0f0',
+    justifyContent: 'space-between',
   },
-  reloadText: {
-    marginLeft: 5,
-    fontSize: 14,
-    fontWeight: 'bold',
+  summaryDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EAE6F4',
+  },
+  summaryLabel: {
+    fontSize: 15,
+    color: '#22263F',
+  },
+  summaryLabelStrong: {
+    fontWeight: '800',
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  alertCard: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  alertDanger: {
+    backgroundColor: '#FFF0F0',
+    borderWidth: 1,
+    borderColor: '#F6CACA',
+  },
+  alertWarning: {
+    backgroundColor: '#FFF5DE',
+    borderWidth: 1,
+    borderColor: '#F3D48A',
+  },
+  alertIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  alertDangerIconWrap: {
+    backgroundColor: '#D51D1D',
+  },
+  alertWarningIconWrap: {
+    backgroundColor: '#FFC107',
+  },
+  alertBody: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1F1C23',
+    marginBottom: 4,
+  },
+  alertText: {
+    fontSize: 13,
+    color: '#655D48',
+  },
+  alertTitleDanger: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#C51B1B',
+    marginBottom: 4,
+  },
+  alertTextDanger: {
+    fontSize: 13,
+    color: '#D65252',
   },
 });

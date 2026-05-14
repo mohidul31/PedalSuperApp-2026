@@ -5,29 +5,40 @@ import React from 'react';
 
 export default function NoDataFound({icon = 'cart-outline', title = 'ডাটা'}) {
   return (
-    <View style={styles.noDataContainer}>
-      <Ionicons name={icon} size={100} color="#f39c12" />
-      <Text style={styles.noDataText}>কোনো {title} যোগ করা নেই</Text>
-      <Text style={styles.noDataSubText}>নতুন {title} যোগ করে শুরু করুন</Text>
+    <View style={styles.container}>
+      <View style={styles.iconContainer}>
+        <Ionicons name={icon} size={40} color="#f39c12" />
+      </View>
+      <Text style={styles.title}>কোনো {title} পাওয়া যায়নি</Text>
+      <Text style={styles.subtitle}>নতুন {title} যোগ করে শুরু করুন</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  noDataContainer: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 48,
   },
-  noDataText: {
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: '#EEF0FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  title: {
     fontSize: 18,
-    color: '#34495e',
-    fontWeight: 'bold',
-    marginTop: 10,
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 8,
   },
-  noDataSubText: {
+  subtitle: {
     fontSize: 14,
-    color: '#7f8c8d',
-    marginTop: 4,
+    color: '#6F759B',
   },
 });

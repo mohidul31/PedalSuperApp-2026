@@ -1,6 +1,7 @@
 import React from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Text, TouchableOpacity, View} from 'react-native';
 import {Icon} from '@rneui/themed';
+import styles from '../../styles/ScreenHeader.styles';
 
 export default function ScreenHeader({
   navigation,
@@ -21,20 +22,3 @@ export default function ScreenHeader({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#F8F9FF',
-  },
-  title: {
-    color: '#2E3192',
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-});

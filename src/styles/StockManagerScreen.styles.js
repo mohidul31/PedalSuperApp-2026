@@ -1,0 +1,213 @@
+import {StyleSheet} from 'react-native';
+
+export default StyleSheet.create({
+  page: {
+    flex: 1,
+    backgroundColor: '#F6F7FF',
+  },
+  searchRow: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1D2A74',
+  },
+  countRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  countText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6F759B',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#B3B7D5',
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 3,
+  },
+  cardLeft: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 10,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  metaPill: {
+    backgroundColor: '#F0F1FA',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  stockPill: {
+    backgroundColor: '#EDF7F1',
+  },
+  metaLabel: {
+    fontSize: 11,
+    color: '#8A92B8',
+    marginBottom: 1,
+  },
+  metaValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1D2A74',
+  },
+  stockValue: {
+    color: '#1B792E',
+  },
+  cardActions: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  editBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#EEF0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#FCE8E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+    maxHeight: '92%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E0E3F0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1D2A74',
+    marginBottom: 20,
+  },
+  formBody: {
+    paddingBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6F759B',
+    marginBottom: 6,
+    marginTop: 14,
+  },
+  input: {
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#1D2A74',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  halfInput: {
+    flex: 1,
+    marginRight: 8,
+  },
+  pickerWrap: {
+    flex: 1,
+    backgroundColor: '#F0F1FA',
+    borderRadius: 16,
+    overflow: 'hidden',
+    height: 52,
+    justifyContent: 'center',
+  },
+  picker: {
+    color: '#1D2A74',
+    height: 52,
+  },
+  errorText: {
+    color: '#E43A3A',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    marginTop: 24,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#F5F7FF',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  cancelBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6F759B',
+  },
+  saveBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: '#1D2A74',
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+});

@@ -1,5 +1,5 @@
 import {SceneMap, TabView} from 'react-native-tab-view';
-import {SafeAreaView, StyleSheet} from 'react-native';
+import {SafeAreaView} from 'react-native';
 import React, {useState} from 'react';
 import {useWindowDimensions} from 'react-native';
 
@@ -7,6 +7,7 @@ import IncomePlanScreen from './IncomePlanScreen';
 import MyBudgetScreen from './MyBudgetScreen';
 import ScreenHeader from '../../components/common/ScreenHeader';
 import SegmentedTabBar from '../../components/common/SegmentedTabBar';
+import styles from '../../styles/BudgetPlannerLandingScreen.styles';
 
 const renderScene = SceneMap({
   myBudget: MyBudgetScreen,
@@ -37,10 +38,3 @@ export default function BudgetPlannerLandingScreen({navigation}) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FF',
-  },
-});

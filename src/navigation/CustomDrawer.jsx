@@ -1,4 +1,4 @@
-import {Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Alert, ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import React, {useContext, useEffect, useState} from 'react';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +7,7 @@ import {Icon} from '@rneui/themed';
 import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
 import menuItems from '../data/menuItems';
+import styles from '../styles/CustomDrawer.styles';
 
 const utilityItems = [
   {label: 'সেটিংস', icon: 'cog-outline', type: 'material-community', color: '#0D79FF'},
@@ -61,14 +62,12 @@ const CustomDrawer = props => {
 
   return (
     <View style={styles.root}>
-      {/* ── Gradient Header ── */}
       <LinearGradient
         colors={['#1A237E', '#2E3192', '#4A52C8']}
         start={{x: 0, y: 0}}
         end={{x: 1, y: 1}}
         style={styles.header}>
 
-        {/* Close button */}
         <TouchableOpacity
           style={styles.closeBtn}
           onPress={() => props.navigation.closeDrawer()}
@@ -76,7 +75,6 @@ const CustomDrawer = props => {
           <Icon name="close" type="material" size={20} color="#fff" />
         </TouchableOpacity>
 
-        {/* Avatar */}
         <View style={styles.avatarRing}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getInitial(username)}</Text>
@@ -94,13 +92,11 @@ const CustomDrawer = props => {
         </View>
       </LinearGradient>
 
-      {/* ── Scrollable Menu ── */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
 
-        {/* Home shortcut */}
         <MenuItem
           icon="home-outline"
           iconType="material-community"
@@ -139,7 +135,6 @@ const CustomDrawer = props => {
           />
         ))}
 
-        {/* Logout */}
         <View style={styles.divider} />
         <TouchableOpacity style={styles.logoutRow} onPress={handleLogout} activeOpacity={0.7}>
           <View style={styles.logoutIconBox}>
@@ -152,8 +147,6 @@ const CustomDrawer = props => {
     </View>
   );
 };
-
-/* ── Small sub-components ── */
 
 const SectionLabel = ({text}) => (
   <Text style={styles.sectionLabel}>{text}</Text>
@@ -174,160 +167,5 @@ const MenuItem = ({icon, iconType, label, color, badge, onPress}) => (
     )}
   </TouchableOpacity>
 );
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#F8F9FF',
-  },
-
-  /* Header */
-  header: {
-    paddingTop: 52,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-  },
-  closeBtn: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarRing: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  avatar: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: '#FFB347',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  headerName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  headerContact: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 12,
-  },
-  betaPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  betaPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
-    letterSpacing: 0.8,
-  },
-
-  /* Scroll */
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32,
-  },
-
-  /* Section label */
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#A0A8C0',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginTop: 20,
-    marginBottom: 6,
-    paddingHorizontal: 6,
-  },
-
-  /* Menu row */
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderRadius: 14,
-    gap: 12,
-    marginBottom: 2,
-  },
-  menuIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#17173C',
-  },
-  badge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  /* Logout */
-  divider: {
-    height: 1,
-    backgroundColor: '#E8EDF5',
-    marginVertical: 16,
-    marginHorizontal: 6,
-  },
-  logoutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    gap: 12,
-    borderRadius: 14,
-  },
-  logoutIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#FFEBEE',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoutLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#E53935',
-  },
-});
 
 export default CustomDrawer;

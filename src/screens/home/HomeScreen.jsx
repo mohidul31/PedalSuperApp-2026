@@ -2,7 +2,6 @@ import {Icon} from '@rneui/themed';
 import {
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import React from 'react';
 import menuItems from '../../data/menuItems';
 import QuickActionCard from '../../components/home/QuickActionCard';
+import styles from '../../styles/HomeScreen.styles';
 
 export default function HomeScreen({navigation}) {
   return (
@@ -72,124 +72,3 @@ export default function HomeScreen({navigation}) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FF',
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#F8F9FF',
-  },
-  title: {
-    color: '#2E3192',
-    fontSize: 26,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  searchCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 10,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 4,
-    marginBottom: 18,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#0C0E48',
-    padding: 0,
-  },
-  searchAction: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#2E3192',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickActionsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
-    marginBottom: 18,
-  },
-  promoCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 4,
-    marginBottom: 18,
-  },
-  promoTitle: {
-    color: '#2E3192',
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  promoText: {
-    color: '#6F759B',
-    fontSize: 14,
-  },
-  promoButton: {
-    backgroundColor: '#2E3192',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  promoButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  investSection: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 18,
-  },
-  infoCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 3,
-  },
-  infoTitle: {
-    color: '#2E3192',
-    fontSize: 16,
-    fontWeight: '800',
-    marginVertical: 6,
-  },
-  infoSub: {
-    color: '#6F759B',
-    fontSize: 13,
-  },
-});
